@@ -1,4 +1,4 @@
-# INSTRUCTIONS — Proyecto: API de Preguntas con FastAPI
+# CONCEPTS
 
 Este documento resume los conceptos clave que necesitás entender para encarar y completar el proyecto. No es un tutorial paso a paso, sino una guía de estudio orientada a los temas que se evalúan en la materia.
 
