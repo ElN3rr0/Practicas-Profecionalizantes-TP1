@@ -1,0 +1,28 @@
+[project]
+name = "fastapi-questions"
+version = "0.1.0"
+description = "API de preguntas con FastAPI y Hugging Face"
+authors = [
+    {name = "Seba",email = "sebastianalcidesrivero@gmail.com"}
+]
+requires-python = "^3.11"
+dependencies = [
+    "fastapi (>=0.136.1,<0.137.0)",
+    "uvicorn (>=0.47.0,<0.48.0)",
+    "sqlalchemy (>=2.0.49,<3.0.0)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "pandas (>=3.0.3,<4.0.0)",
+    "pyarrow (>=24.0.0,<25.0.0)",
+    "requests (>=2.34.2,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.3,<10.0.0)",
+    "httpx (>=0.28.1,<0.29.0)"
+]

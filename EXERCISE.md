@@ -322,5 +322,5 @@ for q in data:
 1. Agregá un endpoint `GET /questions/category/{category}` que filtre por categoría.
 2. Agregá un endpoint `GET /stats` que devuelva cantidad total de preguntas y cantidad por categoría.
 3. Cambiá el dataset de Hugging Face por otro que te interese.
-4. Agregá un endpoint POST para crear preguntas nuevas.
+4. Agregá un endpoint POST DELETE y PUT.
 5. Escribí tests con `pytest` y `httpx`.
