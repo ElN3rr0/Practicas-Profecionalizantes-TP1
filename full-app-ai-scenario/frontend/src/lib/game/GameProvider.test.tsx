@@ -1,0 +1,342 @@
+import { describe, expect, it, vi } from 'vitest';
+import { act, render, renderHook, screen } from '@testing-library/react';
+import {
+  createInitialState,
+  emptyPowerupInventory,
+  gameReducer,
+  GameProvider,
+  useGame,
+} from './GameProvider';
+import type { GameAction } from './GameProvider';
+import type { GameState } from './types';
+
+function start(state: GameState, currentTurn: 0 | 1 = 0): GameState {
+  return gameReducer(state, { type: 'game/start', currentTurn });
+}
+
+describe('createInitialState', () => {
+  it('returns the setup state with config defaults', () => {
+    const state = createInitialState();
+
+    expect(state.status).toBe('setup');
+    expect(state.config).toEqual({ mode: 'coronas', timePerTurn: 20, powerups: [] });
+    expect(state.players.map((p) => p.name)).toEqual(['Jugador 1', 'Jugador 2']);
+    expect(state.currentTurn).toBe(0);
+    expect(state.round).toBe(1);
+    expect(state.roundWins).toEqual([0, 0]);
+    expect(state.winner).toBeNull();
+  });
+
+  it('gives each player an empty powerup inventory', () => {
+    const state = createInitialState();
+
+    expect(state.players[0].powerups).toEqual(emptyPowerupInventory());
+    expect(state.players[1].powerups).toEqual(emptyPowerupInventory());
+  });
+});
+
+describe('gameReducer / player/set', () => {
+  it('updates only the targeted player', () => {
+    const initial = createInitialState();
+    const state = gameReducer(initial, {
+      type: 'player/set',
+      id: 1,
+      name: 'Luis',
+      avatar: 'rocket_launch',
+    });
+
+    expect(state.players[0]).toEqual(initial.players[0]);
+    expect(state.players[1].name).toBe('Luis');
+    expect(state.players[1].avatar).toBe('rocket_launch');
+  });
+});
+
+describe('gameReducer / config/set', () => {
+  it('replaces the shared config', () => {
+    const state = gameReducer(createInitialState(), {
+      type: 'config/set',
+      config: { mode: 'rondas', timePerTurn: 30, powerups: ['fifty-fifty', 'hint'] },
+    });
+
+    expect(state.config.mode).toBe('rondas');
+    expect(state.config.timePerTurn).toBe(30);
+    expect(state.config.powerups).toEqual(['fifty-fifty', 'hint']);
+  });
+});
+
+describe('gameReducer / game/start', () => {
+  it('defaults empty and whitespace-only names', () => {
+    let state = createInitialState();
+    state = gameReducer(state, { type: 'player/set', id: 0, name: '', avatar: 'account_circle' });
+    state = gameReducer(state, {
+      type: 'player/set',
+      id: 1,
+      name: '   ',
+      avatar: 'account_circle',
+    });
+
+    const started = start(state);
+
+    expect(started.players[0].name).toBe('Jugador 1');
+    expect(started.players[1].name).toBe('Jugador 2');
+  });
+
+  it('keeps entered names and enters the spinning status', () => {
+    let state = createInitialState();
+    state = gameReducer(state, { type: 'player/set', id: 0, name: 'Ana', avatar: 'smart_toy' });
+    state = gameReducer(state, { type: 'player/set', id: 1, name: 'Luis', avatar: 'emoji_events' });
+
+    const started = start(state, 1);
+
+    expect(started.players[0].name).toBe('Ana');
+    expect(started.players[1].name).toBe('Luis');
+    expect(started.status).toBe('spinning');
+    expect(started.currentTurn).toBe(1);
+  });
+
+  it('establishes the coronas start state', () => {
+    let state = createInitialState();
+    state = gameReducer(state, {
+      type: 'config/set',
+      config: { ...state.config, mode: 'coronas' },
+    });
+
+    const started = start(state);
+
+    expect(started.config.mode).toBe('coronas');
+    expect(started.players[0].crowns).toEqual([]);
+    expect(started.players[0].crownTally).toBe(0);
+    expect(started.players[1].crowns).toEqual([]);
+    expect(started.players[1].crownTally).toBe(0);
+    expect(started.roundWins).toEqual([0, 0]);
+    expect(started.winner).toBeNull();
+  });
+
+  it('establishes the rondas start state', () => {
+    let state = createInitialState();
+    state = gameReducer(state, { type: 'config/set', config: { ...state.config, mode: 'rondas' } });
+
+    const started = start(state);
+
+    expect(started.config.mode).toBe('rondas');
+    expect(started.round).toBe(1);
+    expect(started.roundWins).toEqual([0, 0]);
+    expect(started.winner).toBeNull();
+  });
+
+  it('initializes each player with one use per selected powerup and zero otherwise', () => {
+    let state = createInitialState();
+    state = gameReducer(state, {
+      type: 'config/set',
+      config: { mode: 'coronas', timePerTurn: 20, powerups: ['fifty-fifty', 'hint'] },
+    });
+
+    const started = start(state);
+
+    const expected = { ...emptyPowerupInventory(), 'fifty-fifty': 1, hint: 1 };
+    expect(started.players[0].powerups).toEqual(expected);
+    expect(started.players[1].powerups).toEqual(expected);
+    expect(started.players[0].powerups).not.toBe(started.players[1].powerups);
+  });
+
+  it('assigns the provided first turn of 0 or 1', () => {
+    expect(start(createInitialState(), 0).currentTurn).toBe(0);
+    expect(start(createInitialState(), 1).currentTurn).toBe(1);
+  });
+});
+
+describe('gameReducer / game/spin', () => {
+  it('clears the current category and enters the spinning status', () => {
+    let state = start(createInitialState());
+    state = gameReducer(state, { type: 'game/land', category: 'arte' });
+
+    const spun = gameReducer(state, { type: 'game/spin' });
+
+    expect(spun.status).toBe('spinning');
+    expect(spun.currentCategory).toBeNull();
+  });
+});
+
+describe('gameReducer / game/land', () => {
+  it('records the landed category and enters the answering status', () => {
+    const state = gameReducer(start(createInitialState()), {
+      type: 'game/land',
+      category: 'ciencia',
+    });
+
+    expect(state.status).toBe('answering');
+    expect(state.currentCategory).toBe('ciencia');
+  });
+});
+
+/** A game deep into "10 rondas", with every field that reset must clear already written. */
+function playedGame(): GameState {
+  let state = gameReducer(createInitialState(), {
+    type: 'config/set',
+    config: { mode: 'rondas', timePerTurn: 30, powerups: ['hint'] },
+  });
+  state = gameReducer(state, { type: 'player/set', id: 0, name: 'Ana', avatar: 'smart_toy' });
+  state = gameReducer(state, { type: 'player/set', id: 1, name: 'Luis', avatar: 'rocket_launch' });
+  state = gameReducer(state, { type: 'game/start', currentTurn: 1 });
+  state = gameReducer(state, { type: 'game/land', category: 'historia' });
+
+  return {
+    ...state,
+    status: 'ended',
+    winner: 0,
+    round: 12,
+    roundWins: [6, 5],
+    roundPoints: [100, 0],
+    roundAnswers: [1, 1],
+    ultraChallenge: 'ciencia',
+    awaitingCrown: true,
+    retryUsed: true,
+    ultraUsed: true,
+    players: [
+      { ...state.players[0], score: 500, crowns: ['arte'], crownTally: 2 },
+      { ...state.players[1], score: 700, crowns: ['historia', 'ciencia'], crownTally: 1 },
+    ],
+  };
+}
+
+describe('gameReducer / game/reset', () => {
+  it('returns every field to its initial value', () => {
+    const midGame = playedGame();
+    expect(midGame).not.toEqual(createInitialState());
+
+    const reset = gameReducer(midGame, { type: 'game/reset' });
+
+    expect(reset).toEqual(createInitialState());
+    expect(reset.status).toBe('setup');
+    expect(reset.winner).toBeNull();
+    expect(reset.players.map((player) => player.name)).toEqual(['Jugador 1', 'Jugador 2']);
+    expect(reset.players.map((player) => player.score)).toEqual([0, 0]);
+    expect(reset.players.map((player) => player.crowns)).toEqual([[], []]);
+  });
+});
+
+describe('gameReducer / unknown action', () => {
+  it('returns the same state unchanged', () => {
+    const state = createInitialState();
+
+    const next = gameReducer(state, { type: 'unknown' } as unknown as GameAction);
+
+    expect(next).toBe(state);
+  });
+});
+
+describe('GameProvider', () => {
+  it('throws when useGame is used outside a provider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => renderHook(() => useGame())).toThrow('useGame must be used within a GameProvider');
+    spy.mockRestore();
+  });
+
+  it('exposes the setup state through the hook', () => {
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    expect(result.current.state.status).toBe('setup');
+    expect(result.current.state.config.mode).toBe('coronas');
+  });
+
+  it('setPlayer updates the shared state', () => {
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    act(() => {
+      result.current.setPlayer(0, { name: 'Ana', avatar: 'smart_toy' });
+    });
+
+    expect(result.current.state.players[0].name).toBe('Ana');
+    expect(result.current.state.players[0].avatar).toBe('smart_toy');
+    expect(result.current.state.players[1].name).toBe('Jugador 2');
+  });
+
+  it('startGame assigns a random first turn of 0 or 1', () => {
+    const randomSpy = vi.spyOn(Math, 'random');
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    randomSpy.mockReturnValue(0.1);
+    act(() => {
+      result.current.startGame();
+    });
+    expect(result.current.state.currentTurn).toBe(0);
+
+    randomSpy.mockReturnValue(0.9);
+    act(() => {
+      result.current.startGame();
+    });
+    expect(result.current.state.currentTurn).toBe(1);
+
+    randomSpy.mockRestore();
+  });
+
+  it('startGame returns true so the caller may navigate', () => {
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    let ready: boolean | undefined;
+    act(() => {
+      ready = result.current.startGame();
+    });
+
+    expect(ready).toBe(true);
+    expect(result.current.state.status).toBe('spinning');
+  });
+
+  it('spin and land dispatch their corresponding state transitions', () => {
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    act(() => {
+      result.current.spin();
+    });
+    expect(result.current.state.status).toBe('spinning');
+    expect(result.current.state.currentCategory).toBeNull();
+
+    act(() => {
+      result.current.land('geografia');
+    });
+    expect(result.current.state.status).toBe('answering');
+    expect(result.current.state.currentCategory).toBe('geografia');
+  });
+
+  it('renders children through the provider', () => {
+    function Probe() {
+      const { state } = useGame();
+      return <output data-testid="probe">{state.status}</output>;
+    }
+
+    render(
+      <GameProvider>
+        <Probe />
+      </GameProvider>,
+    );
+
+    expect(screen.getByTestId('probe')).toHaveTextContent('setup');
+  });
+
+  it('resetGame returns the shared state to the initial value', () => {
+    const { result } = renderHook(() => useGame(), { wrapper: GameProvider });
+
+    act(() => {
+      result.current.setPlayer(0, { name: 'Ana', avatar: 'smart_toy' });
+      result.current.startGame();
+    });
+    expect(result.current.state.status).toBe('spinning');
+    expect(result.current.state.players[0].name).toBe('Ana');
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(result.current.state).toEqual(createInitialState());
+  });
+
+  it('mounts on the provided initial state', () => {
+    const seeded: GameState = { ...createInitialState(), status: 'ended', winner: 0 };
+
+    const { result } = renderHook(() => useGame(), {
+      wrapper: ({ children }) => <GameProvider initialState={seeded}>{children}</GameProvider>,
+    });
+
+    expect(result.current.state).toEqual(seeded);
+  });
+});

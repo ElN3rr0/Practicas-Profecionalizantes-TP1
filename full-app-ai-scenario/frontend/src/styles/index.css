@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse-slow {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 35px -5px rgba(176, 242, 128, 0.35),
+      0 0 70px -10px rgba(56, 16, 67, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 55px 0 rgba(176, 242, 128, 0.6),
+      0 0 100px -5px rgba(190, 242, 153, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes flipper-shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-14deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes bulb-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 4px #bef299);
+  }
+  50% {
+    opacity: 0.35;
+    filter: none;
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 28s linear infinite;
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse-slow 36s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3.5s ease-in-out infinite;
+}
+
+.ripple-active {
+  animation: ripple 0.85s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+.wheel-transition {
+  transition: transform 4500ms cubic-bezier(0.15, 0.9, 0.25, 1);
+  will-change: transform;
+}
+
+.flipper-spin {
+  animation: flipper-shake 0.12s infinite;
+}
+
+.bulb-glow-a {
+  animation: bulb-pulse 1.2s infinite ease-in-out;
+}
+
+.bulb-glow-b {
+  animation: bulb-pulse 1.2s infinite ease-in-out 0.6s;
+}
+
+/*
+ * The wheel spin, the flipper shake and the splash disc are core game feedback,
+ * not decoration, so they keep animating even when the OS asks for reduced
+ * motion. The spin duration is matched to SPIN_DURATION_MS in lib/game/spin.ts.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-glow,
+  .bulb-glow-a,
+  .bulb-glow-b {
+    animation: none;
+  }
+}

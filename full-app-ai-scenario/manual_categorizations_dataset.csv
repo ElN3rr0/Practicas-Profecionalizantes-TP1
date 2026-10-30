@@ -1,0 +1,63 @@
+question_id,question,answer,category_name,confidence_score_ia
+1,"In Sussex, England, the Ecopod Company uses recycled paper to make these.",Coffins,historia,0.3647589087486267
+3,The nose is an amazing piece of the human body.  Every flower or food gives off odor molecules that your nose picks up and your brain translates. How many smells can your brain recognize?,"10,000",ciencia,0.3140849471092224
+6,What does the Greek prefix anthro refer to?,Mankind,ciencia,0.2459394335746765
+10,Carcino is a word of Greek origin which refers to the small intestines.,False,ciencia,0.3799646198749542
+11,What is the symbol for Copper?,Cu,ciencia,0.3315974175930023
+15,What does BTDT mean in instant messaging language?,"been there, done that",entretenimiento,0.35609692335128784
+17,"In chat jargon, the emoticon  [8-] refers to this person.",Frankenstein,entretenimiento,0.347791463136673
+20,"Wood, water, air, wax, natural gas, paper, cardboard and leather are all renewable resources.",False,ciencia,0.27009615302085876
+22,Who may use the .gov domain?,US federal agencies,ciencia,0.27153509855270386
+23,Which of these countries joined the United Nations organization in 2006?,Montenegro,geografia,0.2898520827293396
+27,"Modern cars pollute much less than cars did in the 60s. Today, it takes this many modern cars to produce the same amount of air pollution as a car from the 60s.",20,ciencia,0.3791114389896393
+28,"If the nurse writes NKDA on your chart, what does it mean?",You told the nurse you are not allergic to any medications.,ciencia,0.38284924626350403
+32,Which statement is incorrect?,Gerontology studies grammar and syntax.,deportes,0.2350802719593048
+36,Which one of these goddesses is NOT similar to Aphrodite in some way?,Saraswati,historia,0.31912511587142944
+40,What is the term for a person responsible for devising a new machine or a new process of doing something?,inventor,ciencia,0.3634205460548401
+41,Hyperplasia is the abnormal increase in the number of these.,Cells,ciencia,0.3775765001773834
+42,"In the novels Eragon and Eldest, zarroc is the ancient language word translated as misery. What else does the word refer to?",a sword,entretenimiento,0.3987468481063843
+43,"This mysterious literary hero acquired an immense wealth in order to win back his beloved Daisy, who had married Tom Buchanan.",Jay Gatsby,arte,0.30687087774276733
+44,What does the Farsi phrase Ø´Ø¨ Ø¨Ø®ÙØ±  (shab bekheyr) mean in English?,Good night,entretenimiento,0.3241386413574219
+46,"What word means melancholy, gloomy, or having a peevish temperament?",Atrabilious,arte,0.3947092294692993
+47,Sick is the same as ill.,True,arte,0.3814898729324341
+48,"Success is counted sweetest
+by those who never succeed.
+To comprehend a nectar
+requires the sorest need.",Emily Dickinson,arte,0.3134598433971405
+49,What does the Greek word ÎÎ¿Î®Î¸ÎµÎ¹Î± (VoÃ­thia) mean in English?,Help,arte,0.2963677644729614
+50,"Who is Al Franken talking about when he says, He had us all supporting him and united after 9/11 and then he created a war in Iraq and he will never really have Mission Accomplished?",George W. Bush,historia,0.3613150715827942
+52,A tailor is someone who only makes new clothes.,False,arte,0.3809521198272705
+53,What does the word principal mean?,Main,arte,0.3141118586063385
+55,Ska music was born in Jamaica in the 1960s. Which of these names appears very often in ska lyrics?,Rudy,entretenimiento,0.3355812728404999
+56,Which one of these fantasy books by Piers Anthony is not part of a series?,Mercycle,entretenimiento,0.2558761239051819
+58,"Is this the correct usage of the word continually? 
+Professor Smith gave a speech yesterday. He spoke continually for 3 hours.",No,arte,0.33769047260284424
+61,"What Pulitzer Prize-winning novel, set during the Great Depression, was banned in some US States for vulgar language?",The Grapes of Wrath,arte,0.37761425971984863
+62,"What is the protagonists occupation in the novel, The Mezzanine?",Office Worker,arte,0.36365896463394165
+64,The goddess Anekantin was Isisâ sister and Anubisâ wife.,False,historia,0.3737560212612152
+66,"In the book All Creatures Great and Small, which of Siegfrieds possessions does Tristan keep destroying?",Vehicles,arte,0.2589269280433655
+67,"This is the goddess of eternal youth, the guardian of the golden apples of youth in the Scandinavian mythology.",Idun,historia,0.31363269686698914
+68,"The word samba is probably derived from the Angolan semba, meaning a religious rhythm. The dance and its music were born in the black ghettos of this city. The biggest samba carnival is also held in this city.",Rio de Janeiro,geografia,0.3990989029407501
+76,"The North African Campaign, also known as The Desert War, began in 1940. It included campaigns fought in several African countries. Which of the following was not one of the locations of the North African Campaign?",South Africa,historia,0.39134883880615234
+80,The Great Pyramid is one of the pyramids of the Giza pyramid complex. Which monument is NOT a part of that complex?,The Pyramid of Amenemhet I,historia,0.28630104660987854
+86,Samurai warriors usually carried two swords- a big and a small one. The small one was called wakizashi and was the honour blade of the samurai. He would carry it everywhere and would even sleep with his wakizashi under his pillow.  What was the name of the big sword of the samurai?,Katana,historia,0.31442663073539734
+104,Which movie features With great power comes great responsibility. as a tag line?,Spider-Man,entretenimiento,0.3126315176486969
+105,Which is true about No Doubts hit song Dont Speak?,It was originally a love song.,entretenimiento,0.29332318902015686
+106,"The budget for the film The Blair Witch Project was only $50,000.",False,entretenimiento,0.37795984745025635
+108,Ive been thinking of everything I used to want to be... is the opening line of what 2008 single by 30 Seconds to Mars?,The Story,entretenimiento,0.32437315583229065
+109,What episode of the Andromeda series is the quote on the sound clip taken from?,Star-Crossed,entretenimiento,0.3563787341117859
+110,Which of these isnt a Time Force villain?,Fenix,entretenimiento,0.23323138058185577
+122,Which of these statements about violin tuning is correct?,A violin is tuned by loosening or tightening the pegs at the top or near the bridge.,arte,0.2680649161338806
+125,"Sam Beckett, the protagonist of the TV series Quantum Leap, was from this state.",Indiana,entretenimiento,0.39224693179130554
+129,What was Steven Spielbergs debut theatrical feature film?,The Sugarland Express,entretenimiento,0.3797187805175781
+130,What Academy Award did the 2005 movie Star Wars Episode III: Revenge of the Sith win?,None of these,entretenimiento,0.3375028371810913
+131,What is Captain Americas secret identity?,Steve Rogers,entretenimiento,0.2581923007965088
+134,What member of the Arquette family was married to Nicholas Cage?,Patricia,entretenimiento,0.3939250707626343
+166,"What is the name of Tony Hawks son, who was born in 1992?",Riley Hawk,deportes,0.3623438775539398
+180,"According to a census done in the 1990s, Oklahoma is 2nd to what state in total Native American population?",California,geografia,0.3950384855270386
+181,Many Protestant denominations celebrate this holiday on October 31 and some of them even meld it with Halloween.,The Reformation Day,historia,0.3585796356201172
+186,In which country was the traditional Christmas mistletoe hung up for the first time?,UK,historia,0.3683481812477112
+187,"What is the meaning of the Italian word riavvolgere, from which the name of the popular Italian dish ravioli originated?",To wrap,arte,0.27250155806541443
+188,"According to US traditions, children should leave Santa a glass of milk, cookies and may be a carrot for his reindeer. It is supposed that Santa will come and in exchange of these will leave gifts and sweets for the child.  However, if the child hasnt been good throughout the year, it is said that it will find this in its Christmas stocking.",A lump of coal,entretenimiento,0.3425441384315491
+194,What mythical animal is one of the symbols of the United Kingdom?,Unicorn,historia,0.2337515652179718
+203,Which famous explorer reached the territory of the Dominican Republic in 1492?,Christopher Columbus,historia,0.39011749625205994
