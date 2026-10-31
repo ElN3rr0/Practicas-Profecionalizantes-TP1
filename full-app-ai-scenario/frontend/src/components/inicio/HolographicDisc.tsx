@@ -86,11 +86,11 @@ export default function HolographicDisc({ rippling, onLaunch }: HolographicDiscP
 
       {/* Center logo disc. */}
       <span className="animate-pulse-glow absolute inset-0 m-auto flex h-44 w-44 flex-col items-center justify-center rounded-full border-2 border-lime-primary/70 bg-gradient-to-b from-[#201026] via-[#120a16] to-[#0A0A0A] p-4 transition-all duration-300 group-hover:border-lime-primary sm:h-56 sm:w-56">
-        <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-lime-primary/60 bg-plum transition-transform duration-300 group-hover:rotate-12 sm:h-14 sm:w-14">
-          <span className="font-display text-xl font-black tracking-wider text-lime-primary sm:text-2xl">
-            VS
-          </span>
-        </span>
+        <img
+          src="/logo-inicio.png"
+          alt=""
+          className="mb-2 h-14 w-auto transition-transform duration-300 group-hover:scale-105 sm:h-16"
+        />
         <span className="font-display text-xs font-black uppercase tracking-widest text-light-text sm:text-sm">
           A VER SI SABÉS
         </span>

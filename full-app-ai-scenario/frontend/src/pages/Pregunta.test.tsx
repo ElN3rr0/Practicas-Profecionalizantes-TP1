@@ -77,9 +77,9 @@ function pathname(): string {
   return screen.getByTestId('location-probe').textContent ?? '';
 }
 
-function seedStart(config: Partial<GameConfig> = {}) {
+function seedStart(config: Partial<Omit<GameConfig, 'language'>> = {}) {
   return (game: GameContextValue) => {
-    game.setConfig({ mode: 'coronas', timePerTurn: 20, powerups: [], ...config });
+    game.setConfig({ mode: 'coronas', timePerTurn: 20, powerups: [], language: 'es', ...config });
     game.startGame();
     game.land('arte');
   };
@@ -186,7 +186,9 @@ describe('Pregunta', () => {
     renderPage();
     await flush();
 
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/questions/category/arte?limit=4');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/questions/category/arte?limit=4&lang=es',
+    );
     expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién pintó la Gioconda?');
     expect(screen.getByTestId('category-badge')).toHaveTextContent('Arte');
     expect(screen.getByText('Corona en Juego')).toBeInTheDocument();
@@ -199,6 +201,23 @@ describe('Pregunta', () => {
       options.filter((element) => element.textContent?.includes('Leonardo da Vinci')),
     ).toHaveLength(1);
     expect(screen.getByTestId('countdown')).toHaveTextContent('20');
+  });
+
+  it('requests questions in the selected language', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
+    const fetchMock = stubQuestions();
+
+    renderPage((game) => {
+      game.setConfig({ mode: 'coronas', timePerTurn: 20, powerups: [], language: 'en' });
+      game.startGame();
+      game.land('arte');
+    });
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/questions/category/arte?limit=4&lang=en',
+    );
   });
 
   it('shows the defensive state when the category has fewer than four questions', async () => {
@@ -269,6 +288,8 @@ describe('Pregunta', () => {
     expect(state.players[0].crownTally).toBe(1);
     expect(state.players[1].crownTally).toBe(0);
     expect(state.currentTurn).toBe(1);
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('¡Correcto!');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(pathname()).toBe('/ruleta');
   });
 
@@ -287,6 +308,9 @@ describe('Pregunta', () => {
     expect(state.players[0].score).toBe(0);
     expect(state.players[1].score).toBe(0);
     expect(state.currentTurn).toBe(1);
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('Incorrecto');
+    expect(screen.getByTestId('feedback-correct-answer')).toHaveTextContent('Leonardo da Vinci');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(pathname()).toBe('/ruleta');
   });
 
@@ -303,6 +327,8 @@ describe('Pregunta', () => {
     const state = readState();
     expect(state.players[0].score).toBe(0);
     expect(state.currentTurn).toBe(1);
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('Se acabó el tiempo');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(pathname()).toBe('/ruleta');
   });
 
@@ -342,6 +368,8 @@ describe('Pregunta', () => {
 
     expect(readState().currentTurn).toBe(1);
     expect(readState().players[0].score).toBe(0);
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('Incorrecto');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(pathname()).toBe('/ruleta');
   });
 
@@ -406,7 +434,7 @@ describe('Pregunta', () => {
     await flush();
 
     expect(fetchMock).toHaveBeenLastCalledWith(
-      'http://localhost:8000/questions/category/arte?skip=1&limit=4',
+      'http://localhost:8000/questions/category/arte?skip=1&limit=4&lang=es',
     );
     expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién esculpió el David?');
     expect(readState().currentTurn).toBe(0);
@@ -440,7 +468,7 @@ describe('Pregunta', () => {
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:8000/questions/category/ciencia?limit=4',
+      'http://localhost:8000/questions/category/ciencia?limit=4&lang=es',
     );
     expect(readState().ultraChallenge).toBe('ciencia');
 
@@ -506,6 +534,8 @@ describe('Pregunta', () => {
     expect(state.status).toBe('ended');
     expect(state.winner).toBe(0);
     expect(state.players[0].crowns).toHaveLength(6);
+    expect(screen.getByTestId('answer-feedback')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver resultados' }));
     expect(pathname()).toBe('/resultados');
   });
 
@@ -515,7 +545,12 @@ describe('Pregunta', () => {
     stubQuestions();
 
     renderPage((game) => {
-      game.setConfig({ mode: 'coronas', timePerTurn: 20, powerups: ['second-chance'] });
+      game.setConfig({
+        mode: 'coronas',
+        timePerTurn: 20,
+        powerups: ['second-chance'],
+        language: 'es',
+      });
       game.startGame();
       game.land('arte');
       const answerWrong = () => {
@@ -594,6 +629,9 @@ describe('Pregunta', () => {
 
     fireEvent.click(option(0));
     fireEvent.click(confirmButton());
+
+    // The result box shows first; continue to reach the crown picker.
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Elegí tu corona' });
     fireEvent.click(within(dialog).getByTestId('crown-option-ciencia'));
@@ -808,6 +846,7 @@ describe('Pregunta', () => {
     expect(playMock).toHaveBeenCalledWith('correct');
     expect(state.players[0].score).toBe(100);
     expect(state.currentTurn).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(pathname()).toBe('/ruleta');
 
     window.removeEventListener('error', swallow);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import AnswerFeedback, { type FeedbackKind } from '../components/pregunta/AnswerFeedback';
 import AnswerGrid from '../components/pregunta/AnswerGrid';
 import CrownPicker from '../components/pregunta/CrownPicker';
 import Feedback from '../components/pregunta/Feedback';
@@ -18,12 +19,39 @@ import {
   eliminationIndexes,
   type QuestionRound,
 } from '../lib/game/question';
-import { EXTRA_SECONDS, ROUNDS_PER_GAME } from '../lib/game/rules';
+import { EXTRA_SECONDS, POINTS_PER_CORRECT_ANSWER, ROUNDS_PER_GAME } from '../lib/game/rules';
 import type { AnswerOutcome, CategoryName, GameMode, PowerupId } from '../lib/game/types';
 
 type LoadState = 'loading' | 'ready' | 'insufficient' | 'error' | 'no-category';
 
 const RETRY_NOTICE = 'Respuesta incorrecta. Se activó tu 2da Chance: ¡tenés otra oportunidad!';
+
+interface PendingFeedback {
+  kind: FeedbackKind;
+  isCorrect: boolean;
+  isUltra: boolean;
+  outcome: AnswerOutcome;
+  correctAnswer: string;
+  ultraCategory: CategoryName | null;
+}
+
+/** The congratulation / explanation line shown in the result box. */
+function feedbackDetail(pending: PendingFeedback): string {
+  if (pending.kind === 'timeout') return 'No respondiste a tiempo.';
+  if (!pending.isCorrect) {
+    return pending.isUltra
+      ? 'Fallaste el ultra desafío: se reinició tu racha de aciertos.'
+      : 'No sumaste puntos esta vez.';
+  }
+  if (pending.outcome === 'crown-pick') {
+    return '¡Completaste 3 aciertos! Elegí la corona que querés sumar.';
+  }
+  if (pending.isUltra) {
+    const label = pending.ultraCategory ? CATEGORY_LABELS[pending.ultraCategory] : 'esa categoría';
+    return `¡Ganaste la corona de ${label}!`;
+  }
+  return `¡Bien ahí! Sumaste ${POINTS_PER_CORRECT_ANSWER} puntos.`;
+}
 
 /**
  * The round badge text. A "10 rondas" game that is still playing past the tenth round is
@@ -74,12 +102,14 @@ export default function Pregunta() {
   const [showUltraPicker, setShowUltraPicker] = useState(false);
   const [cursors, setCursors] = useState<Partial<Record<CategoryName, number>>>({});
   const [reload, setReload] = useState(0);
+  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
 
   const resolvedRef = useRef(true);
   const usedPowerupsRef = useRef<Set<PowerupId>>(new Set());
 
   const skip = category === null ? 0 : (cursors[category] ?? 0);
   const timePerTurn = state.config.timePerTurn;
+  const language = state.config.language;
 
   useEffect(() => {
     if (category === null) {
@@ -104,6 +134,7 @@ export default function Pregunta() {
     getQuestionsByCategory(category, {
       limit: QUESTIONS_PER_ROUND,
       ...(skip > 0 ? { skip } : {}),
+      lang: language,
     })
       .then((questions) => {
         if (cancelled) return;
@@ -122,7 +153,7 @@ export default function Pregunta() {
     return () => {
       cancelled = true;
     };
-  }, [category, skip, reload, timePerTurn]);
+  }, [category, skip, reload, timePerTurn, language]);
 
   const prepareRetry = useCallback(() => {
     setWrongSelection(true);
@@ -183,15 +214,34 @@ export default function Pregunta() {
     resolvedRef.current = true;
 
     const isUltra = state.ultraChallenge !== null;
+    const ultraCategory = state.ultraChallenge;
+    const correctAnswer = question ? question.options[question.correctIndex] : '';
     const outcome = isUltra
       ? resolveUltra(false, { allowSecondChance: false })
       : answerQuestion(false, { allowSecondChance: false });
-    if (isUltra) applyUltraOutcome(outcome);
-    else applyOutcome(outcome);
-    playSound('timeout');
-  }, [state.ultraChallenge, answerQuestion, resolveUltra, applyOutcome, applyUltraOutcome]);
+    if (outcome !== 'none') {
+      setPendingFeedback({
+        kind: 'timeout',
+        isCorrect: false,
+        isUltra,
+        outcome,
+        correctAnswer,
+        ultraCategory,
+      });
+    }
+    try {
+      playSound('timeout');
+    } catch {
+      // ignore audio failures
+    }
+  }, [question, state.ultraChallenge, answerQuestion, resolveUltra]);
 
-  const paused = load !== 'ready' || resolvedRef.current || state.awaitingCrown || showUltraPicker;
+  const paused =
+    load !== 'ready' ||
+    resolvedRef.current ||
+    state.awaitingCrown ||
+    showUltraPicker ||
+    pendingFeedback !== null;
 
   useEffect(() => {
     if (paused) return;
@@ -210,21 +260,41 @@ export default function Pregunta() {
     setWrongSelection(!isCorrect);
 
     const isUltra = state.ultraChallenge !== null;
+    const ultraCategory = state.ultraChallenge;
+    const correctAnswer = question.options[question.correctIndex];
     const outcome = isUltra ? resolveUltra(isCorrect) : answerQuestion(isCorrect);
+
+    if (outcome === 'retry') {
+      prepareRetry();
+    } else if (outcome !== 'none') {
+      // The result box is shown first; navigation happens when the player continues.
+      setPendingFeedback({
+        kind: isCorrect ? 'correct' : 'incorrect',
+        isCorrect,
+        isUltra,
+        outcome,
+        correctAnswer,
+        ultraCategory,
+      });
+    }
+
+    // Fire-and-forget: the outcome above is already committed, so a failing audio
+    // backend can never block the result box or the navigation.
+    try {
+      playSound(answerCue(isCorrect, isUltra, outcome));
+    } catch {
+      // ignore audio failures
+    }
+  }, [question, selected, state.ultraChallenge, answerQuestion, resolveUltra, prepareRetry]);
+
+  /** Applies the deferred outcome once the player dismisses the result box. */
+  const handleContinue = useCallback(() => {
+    if (pendingFeedback === null) return;
+    const { outcome, isUltra } = pendingFeedback;
+    setPendingFeedback(null);
     if (isUltra) applyUltraOutcome(outcome);
     else applyOutcome(outcome);
-    // The reducer has already decided the outcome, and the cue is requested last, so a
-    // failing audio backend can never change or delay what the answer did.
-    playSound(answerCue(isCorrect, isUltra, outcome));
-  }, [
-    question,
-    selected,
-    state.ultraChallenge,
-    answerQuestion,
-    resolveUltra,
-    applyOutcome,
-    applyUltraOutcome,
-  ]);
+  }, [pendingFeedback, applyOutcome, applyUltraOutcome]);
 
   const handleSelect = useCallback(
     (index: number) => {
@@ -477,6 +547,16 @@ export default function Pregunta() {
           crowns={player.crowns}
           onPick={handleStartUltra}
           onCancel={() => setShowUltraPicker(false)}
+        />
+      )}
+
+      {pendingFeedback !== null && (
+        <AnswerFeedback
+          kind={pendingFeedback.kind}
+          correctAnswer={pendingFeedback.correctAnswer}
+          detail={feedbackDetail(pendingFeedback)}
+          continueLabel={pendingFeedback.outcome === 'ended' ? 'Ver resultados' : 'Continuar'}
+          onContinue={handleContinue}
         />
       )}
     </section>

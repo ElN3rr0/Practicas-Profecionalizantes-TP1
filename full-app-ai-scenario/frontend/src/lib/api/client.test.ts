@@ -48,6 +48,15 @@ describe('getQuestionsByCategory', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/questions/category/arte`);
   });
+
+  it('includes the requested language in the URL', async () => {
+    const fetchMock = mockFetch([]);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getQuestionsByCategory('arte', { limit: 4, lang: 'es' });
+
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/questions/category/arte?limit=4&lang=es`);
+  });
 });
 
 describe('getQuestion', () => {

@@ -111,6 +111,7 @@ describe('Usuarios', () => {
       mode: 'rondas',
       timePerTurn: 30,
       powerups: ['fifty-fifty', 'hint'],
+      language: 'es',
     });
     expect(state.round).toBe(1);
     expect(state.roundWins).toEqual([0, 0]);

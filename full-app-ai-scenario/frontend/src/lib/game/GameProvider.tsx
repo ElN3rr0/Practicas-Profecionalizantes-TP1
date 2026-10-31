@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import {
   POINTS_PER_CORRECT_ANSWER,
@@ -8,6 +16,7 @@ import {
   stateWinner,
   withCrown,
 } from './rules';
+import { DEFAULT_LANGUAGE, readStoredLanguage, storeLanguage } from './language';
 import type {
   AnswerOutcome,
   AvatarId,
@@ -90,7 +99,7 @@ function createPlayer(id: 0 | 1, name: string): Player {
 export function createInitialState(): GameState {
   return {
     players: [createPlayer(0, DEFAULT_PLAYER_NAMES[0]), createPlayer(1, DEFAULT_PLAYER_NAMES[1])],
-    config: { mode: 'coronas', timePerTurn: 20, powerups: [] },
+    config: { mode: 'coronas', timePerTurn: 20, powerups: [], language: DEFAULT_LANGUAGE },
     currentTurn: 0,
     round: 1,
     roundWins: [0, 0],
@@ -104,6 +113,12 @@ export function createInitialState(): GameState {
     retryUsed: false,
     ultraUsed: false,
   };
+}
+
+/** Initial state seeded with the player's persisted language preference. */
+function initialGameState(): GameState {
+  const base = createInitialState();
+  return { ...base, config: { ...base.config, language: readStoredLanguage() } };
 }
 
 export type GameAction =
@@ -155,8 +170,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     case 'config/set':
       return { ...state, config: action.config };
-    case 'game/reset':
-      return createInitialState();
+    case 'game/reset': {
+      const fresh = createInitialState();
+      // A new game keeps the language the player already picked.
+      return { ...fresh, config: { ...fresh.config, language: state.config.language } };
+    }
     case 'game/start':
       return startGameState(state, action.currentTurn);
     case 'game/spin':
@@ -405,10 +423,15 @@ export function GameProvider({
   /** Starting point of the store, so a caller can mount it on a known game state. */
   initialState?: GameState;
 }) {
-  const [state, setState] = useState<GameState>(initialState ?? createInitialState);
+  const [state, setState] = useState<GameState>(() => initialState ?? initialGameState());
   // The store is read synchronously by callers that need the next outcome, so the
   // mirror is advanced next to every write instead of only on the next render.
   const stateRef = useRef(state);
+
+  // Remember the player's language so it survives reloads and new games.
+  useEffect(() => {
+    storeLanguage(state.config.language);
+  }, [state.config.language]);
 
   const dispatch = useCallback((action: GameAction) => {
     const next = gameReducer(stateRef.current, action);

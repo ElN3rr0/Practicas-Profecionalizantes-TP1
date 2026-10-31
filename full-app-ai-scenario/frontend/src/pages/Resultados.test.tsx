@@ -59,8 +59,7 @@ describe('Resultados', () => {
   it('renders the results view inside the app shell', () => {
     renderResults(finishedGame({ crowns: [EVERY_CROWN, []], winner: 0 }));
 
-    expect(screen.getByText('A Ver Si Sabés')).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ir al inicio' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     expect(screen.getByTestId('winner-banner')).toBeInTheDocument();
   });

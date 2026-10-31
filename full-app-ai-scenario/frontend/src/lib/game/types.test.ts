@@ -55,7 +55,7 @@ describe('game state types', () => {
         powerups: emptyInventory(),
       },
     ];
-    const config: GameConfig = { mode, timePerTurn: 15, powerups: enabledPowerups };
+    const config: GameConfig = { mode, timePerTurn: 15, powerups: enabledPowerups, language: 'es' };
 
     const state: GameState = {
       players,

@@ -22,7 +22,7 @@ describe('App', () => {
   it('renders the shell and the hero at the root route', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: '¡A VER SI SABÉS!' })).toBeInTheDocument();
-    expect(screen.getByText('A Ver Si Sabés')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ir al inicio' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 

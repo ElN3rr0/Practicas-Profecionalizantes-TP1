@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { MUTE_STORAGE_KEY, setMuted } from '../../lib/audio/mute';
 import Header from './Header';
 
@@ -11,10 +11,16 @@ vi.mock('../../lib/audio', async (importOriginal) => {
   return { ...actual, playSound: playSoundMock };
 });
 
-function renderHeader() {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-probe">{location.pathname}</output>;
+}
+
+function renderHeader(initialPath = '/ruleta') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <Header />
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -30,26 +36,20 @@ beforeEach(() => {
 });
 
 describe('Header', () => {
-  it('renders the VS mark and the title', () => {
+  it('renders the dashboard home button', () => {
     renderHeader();
-    expect(screen.getByText('VS')).toBeInTheDocument();
-    expect(screen.getByText('A Ver Si Sabés')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ir al inicio' })).toBeInTheDocument();
   });
 
-  it('renders navigation links to all five routes', () => {
-    renderHeader();
-    for (const label of ['Inicio', 'Usuarios', 'Ruleta', 'Pregunta', 'Resultados']) {
-      expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
-    }
+  it('navigates to the start screen when the logo is pressed', () => {
+    renderHeader('/ruleta');
+    fireEvent.click(screen.getByRole('button', { name: 'Ir al inicio' }));
+    expect(screen.getByTestId('location-probe').textContent).toBe('/');
   });
 
-  it('requests one click cue per navigation', () => {
+  it('does not render a page-switching navigation menu', () => {
     renderHeader();
-
-    fireEvent.click(screen.getByRole('link', { name: 'Ruleta' }));
-
-    expect(playSoundMock).toHaveBeenCalledTimes(1);
-    expect(playSoundMock).toHaveBeenCalledWith('click');
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 
   it('exposes the mute choice as a pressed state on a native button', () => {

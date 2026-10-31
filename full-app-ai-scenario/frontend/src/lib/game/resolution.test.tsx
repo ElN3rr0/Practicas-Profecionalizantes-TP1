@@ -646,7 +646,12 @@ describe('GameProvider actions', () => {
     const { result } = setup();
 
     act(() => {
-      result.current.setConfig({ mode: 'coronas', timePerTurn: 15, powerups: ['hint'] });
+      result.current.setConfig({
+        mode: 'coronas',
+        timePerTurn: 15,
+        powerups: ['hint'],
+        language: 'es',
+      });
     });
     act(() => {
       result.current.startGame();

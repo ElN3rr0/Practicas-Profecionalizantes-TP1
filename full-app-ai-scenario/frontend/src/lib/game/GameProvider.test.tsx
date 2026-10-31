@@ -19,7 +19,12 @@ describe('createInitialState', () => {
     const state = createInitialState();
 
     expect(state.status).toBe('setup');
-    expect(state.config).toEqual({ mode: 'coronas', timePerTurn: 20, powerups: [] });
+    expect(state.config).toEqual({
+      mode: 'coronas',
+      timePerTurn: 20,
+      powerups: [],
+      language: 'es',
+    });
     expect(state.players.map((p) => p.name)).toEqual(['Jugador 1', 'Jugador 2']);
     expect(state.currentTurn).toBe(0);
     expect(state.round).toBe(1);
@@ -55,7 +60,12 @@ describe('gameReducer / config/set', () => {
   it('replaces the shared config', () => {
     const state = gameReducer(createInitialState(), {
       type: 'config/set',
-      config: { mode: 'rondas', timePerTurn: 30, powerups: ['fifty-fifty', 'hint'] },
+      config: {
+        mode: 'rondas',
+        timePerTurn: 30,
+        powerups: ['fifty-fifty', 'hint'],
+        language: 'es',
+      },
     });
 
     expect(state.config.mode).toBe('rondas');
@@ -128,7 +138,12 @@ describe('gameReducer / game/start', () => {
     let state = createInitialState();
     state = gameReducer(state, {
       type: 'config/set',
-      config: { mode: 'coronas', timePerTurn: 20, powerups: ['fifty-fifty', 'hint'] },
+      config: {
+        mode: 'coronas',
+        timePerTurn: 20,
+        powerups: ['fifty-fifty', 'hint'],
+        language: 'es',
+      },
     });
 
     const started = start(state);
@@ -173,7 +188,7 @@ describe('gameReducer / game/land', () => {
 function playedGame(): GameState {
   let state = gameReducer(createInitialState(), {
     type: 'config/set',
-    config: { mode: 'rondas', timePerTurn: 30, powerups: ['hint'] },
+    config: { mode: 'rondas', timePerTurn: 30, powerups: ['hint'], language: 'es' },
   });
   state = gameReducer(state, { type: 'player/set', id: 0, name: 'Ana', avatar: 'smart_toy' });
   state = gameReducer(state, { type: 'player/set', id: 1, name: 'Luis', avatar: 'rocket_launch' });
@@ -212,6 +227,16 @@ describe('gameReducer / game/reset', () => {
     expect(reset.players.map((player) => player.name)).toEqual(['Jugador 1', 'Jugador 2']);
     expect(reset.players.map((player) => player.score)).toEqual([0, 0]);
     expect(reset.players.map((player) => player.crowns)).toEqual([[], []]);
+  });
+
+  it('keeps the selected language when the game resets', () => {
+    const base = createInitialState();
+    const withEnglish = { ...base, config: { ...base.config, language: 'en' as const } };
+
+    const reset = gameReducer(withEnglish, { type: 'game/reset' });
+
+    expect(reset.config.language).toBe('en');
+    expect(reset.players[0].score).toBe(0);
   });
 });
 

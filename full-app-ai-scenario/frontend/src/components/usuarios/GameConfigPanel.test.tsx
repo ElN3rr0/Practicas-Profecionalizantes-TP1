@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { GameProvider, useGame } from '../../lib/game/GameProvider';
 import type { GameConfig } from '../../lib/game/types';
@@ -24,10 +24,19 @@ function readConfig(): GameConfig {
 }
 
 describe('GameConfigPanel', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('renders with the config defaults', () => {
     renderPanel();
 
-    expect(readConfig()).toEqual({ mode: 'coronas', timePerTurn: 20, powerups: [] });
+    expect(readConfig()).toEqual({
+      mode: 'coronas',
+      timePerTurn: 20,
+      powerups: [],
+      language: 'es',
+    });
     expect(screen.getByRole('button', { name: '6 Coronas' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -92,5 +101,34 @@ describe('GameConfigPanel', () => {
     fireEvent.click(fifty);
 
     expect(readConfig().powerups).toEqual([]);
+  });
+
+  it('selects English and records it in the shared config', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(readConfig().language).toBe('en');
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Español' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('persists the chosen language in localStorage', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(localStorage.getItem('aver-si-sabes:language')).toBe('en');
+  });
+
+  it('starts in the stored language', () => {
+    localStorage.setItem('aver-si-sabes:language', 'en');
+    renderPanel();
+
+    expect(readConfig().language).toBe('en');
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

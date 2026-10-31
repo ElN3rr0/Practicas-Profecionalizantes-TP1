@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import BackgroundTasks, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.database import get_db, engine
-from app.models import Base, Question, Categorization
+from sqlalchemy.orm import Session
 from app.categories import CATEGORIES
+from app.database import SessionLocal, engine, get_db
+from app.models import Base, Categorization, Question, Translation
+from app.translation import SUPPORTED_LANGUAGES, get_or_create_translation
 from pydantic import BaseModel
 
 class QuestionCreate(BaseModel):
@@ -28,6 +29,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def _normalized_lang(lang: str) -> str:
+    """Only 'en' and 'es' are supported; anything else falls back to 'en'."""
+    return lang if lang in SUPPORTED_LANGUAGES else "en"
+
+
+def _translation_map(db: Session, question_ids: list[int], lang: str) -> dict[int, Translation]:
+    """Look up the stored translations for a batch of question ids in one query."""
+    if lang == "en" or not question_ids:
+        return {}
+    rows = (
+        db.query(Translation)
+        .filter(Translation.lang == lang, Translation.question_id.in_(question_ids))
+        .all()
+    )
+    return {row.question_id: row for row in rows}
+
+
+def _translate_missing(question_ids: list[int], lang: str) -> None:
+    """Background task: translate and store the questions that had no translation yet."""
+    if lang == "en" or not question_ids:
+        return
+    db = SessionLocal()
+    try:
+        questions = db.query(Question).filter(Question.id.in_(question_ids)).all()
+        for question in questions:
+            get_or_create_translation(db, question, lang)
+    finally:
+        db.close()
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
@@ -42,16 +73,50 @@ def list_questions(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)
     return questions
 
 @app.get("/questions/{question_id}")
-def get_question(question_id: int, db: Session = Depends(get_db)):
+def get_question(
+    question_id: int,
+    background_tasks: BackgroundTasks,
+    lang: str = "en",
+    db: Session = Depends(get_db),
+):
     question = db.query(Question).filter(Question.id == question_id).first()
     if not question:
         return {"error": "Pregunta no encontrada"}
-    return question
+
+    lang = _normalized_lang(lang)
+    translation = _translation_map(db, [question.id], lang).get(question.id)
+    if translation is None:
+        if lang != "en":
+            background_tasks.add_task(_translate_missing, [question.id], lang)
+        return {
+            "id": question.id,
+            "question": question.question,
+            "answer": question.answer,
+            "category": question.category,
+            "source": question.source,
+            "lang": lang,
+        }
+    return {
+        "id": question.id,
+        "question": translation.question_text,
+        "answer": translation.answer_text,
+        "category": question.category,
+        "source": question.source,
+        "lang": lang,
+    }
 
 
 # --- Reemplaza al viejo get_questions_by_category ---
 @app.get("/questions/category/{category_name}")
-def list_by_category(category_name: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def list_by_category(
+    category_name: str,
+    background_tasks: BackgroundTasks,
+    skip: int = 0,
+    limit: int = 10,
+    lang: str = "en",
+    db: Session = Depends(get_db),
+):
+    lang = _normalized_lang(lang)
     results = (
         db.query(Question, Categorization)
         .join(Categorization, Categorization.question_id == Question.id)
@@ -62,18 +127,27 @@ def list_by_category(category_name: str, skip: int = 0, limit: int = 10, db: Ses
     )
 
     if not results:
-        return {"error": f"No se encontraron preguntas para la categoría: {category_name}"}
+        return []
+
+    ids = [question.id for question, _ in results]
+    translations = _translation_map(db, ids, lang)
+    missing = [question_id for question_id in ids if question_id not in translations]
+    if missing:
+        # The response falls back to English now; the translation lands next time.
+        background_tasks.add_task(_translate_missing, missing, lang)
 
     response = []
     for question, categorization in results:
+        translation = translations.get(question.id)
         response.append({
             "id": question.id,
-            "question": question.question,
-            "answer": question.answer,
+            "question": translation.question_text if translation else question.question,
+            "answer": translation.answer_text if translation else question.answer,
             "source": question.source,
             "category_name": categorization.category_name,
             "confidence_score": categorization.confidence_score,
             "is_automatic": categorization.is_automatic,
+            "lang": lang,
         })
     return response
 

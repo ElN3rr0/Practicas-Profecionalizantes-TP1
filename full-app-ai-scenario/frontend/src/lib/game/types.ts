@@ -19,10 +19,15 @@ export type Player = {
 
 export type GameMode = 'coronas' | 'rondas';
 
+/** Language of the question/answer content served by the API. */
+export type Language = 'en' | 'es';
+
 export type GameConfig = {
   mode: GameMode;
   timePerTurn: 15 | 20 | 30;
   powerups: PowerupId[];
+  /** Selected content language; persisted and kept across a new game. */
+  language: Language;
 };
 
 export type GameStatus = 'setup' | 'spinning' | 'answering' | 'ended';

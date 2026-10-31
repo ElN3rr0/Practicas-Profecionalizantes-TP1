@@ -1,5 +1,5 @@
 import { POWERUP_IDS, useGame } from '../../lib/game/GameProvider';
-import type { GameMode, PowerupId } from '../../lib/game/types';
+import type { GameMode, Language, PowerupId } from '../../lib/game/types';
 
 interface ModeOption {
   id: GameMode;
@@ -37,6 +37,17 @@ const POWERUP_OPTIONS: readonly PowerupOption[] = [
   { id: 'hint', label: 'Pista', icon: 'lightbulb' },
 ];
 
+interface LanguageOption {
+  id: Language;
+  label: string;
+  flag: string;
+}
+
+const LANGUAGE_OPTIONS: readonly LanguageOption[] = [
+  { id: 'es', label: 'Español', flag: '🇦🇷' },
+  { id: 'en', label: 'English', flag: '🇬🇧' },
+];
+
 const sectionTitle = 'text-[11px] font-semibold uppercase tracking-wider text-[#888888]';
 
 export default function GameConfigPanel() {
@@ -57,8 +68,36 @@ export default function GameConfigPanel() {
     setConfig({ ...config, powerups: POWERUP_IDS.filter((powerup) => enabled.has(powerup)) });
   };
 
+  const setLanguage = (language: Language) => setConfig({ ...config, language });
+
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className={sectionTitle}>Idioma / Language</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {LANGUAGE_OPTIONS.map((option) => {
+            const selected = config.language === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setLanguage(option.id)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
+                  selected
+                    ? 'border border-lime-primary/50 bg-plum text-lime-primary'
+                    : 'border border-transparent bg-[#181818] text-[#888888] hover:text-light-text'
+                }`}
+              >
+                <span aria-hidden="true">{option.flag}</span>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
       <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className={sectionTitle}>Modo de Juego</h2>
