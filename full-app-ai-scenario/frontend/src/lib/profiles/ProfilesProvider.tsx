@@ -22,6 +22,8 @@ export type GamePlayerResult = {
   incorrectAnswers: number;
   bestStreak: number;
   isWinner: boolean;
+  /** Overrides the game-level flag; a retiree gets no completion reward. */
+  completed?: boolean;
 };
 
 export type GameResultInput = {
@@ -143,7 +145,7 @@ export function ProfilesProvider({ children }: { children: ReactNode }) {
         const reward = calculateGameReward({
           correctAnswers: player.correctAnswers,
           isWinner: player.isWinner,
-          completed: true,
+          completed: player.completed ?? true,
         });
         const levelBefore = levelProgress(profile.totalXp).level;
         const unlockedBefore = new Set(

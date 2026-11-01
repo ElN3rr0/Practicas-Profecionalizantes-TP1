@@ -58,6 +58,7 @@ interface FinishedGamePatch {
   roundWins?: [number, number];
   tournament?: boolean;
   seriesWins?: [number, number];
+  retiredBy?: 0 | 1 | null;
 }
 
 /** A game whose result is already recorded, ready for the results screen. */
@@ -71,6 +72,7 @@ export function finishedGame({
   roundWins = [0, 0],
   tournament = false,
   seriesWins = [0, 0],
+  retiredBy = null,
 }: FinishedGamePatch = {}): GameState {
   const base = createInitialState();
   const state: GameState = {
@@ -80,6 +82,7 @@ export function finishedGame({
     winner,
     roundWins,
     seriesWins,
+    retiredBy,
   };
 
   const withPlayers = patchPlayer(state, 0, {

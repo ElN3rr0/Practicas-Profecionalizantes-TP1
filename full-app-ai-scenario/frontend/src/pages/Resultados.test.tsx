@@ -278,4 +278,29 @@ describe('Resultados', () => {
     expect(readState().status).toBe('spinning');
     expect(readState().seriesWins).toEqual([0, 0]);
   });
+
+  it('awards the game to the rival when a player retires', () => {
+    const ana = createEmptyProfile('Ana');
+    const luis = createEmptyProfile('Luis');
+    saveProfiles([ana, luis]);
+
+    const base = finishedGame({ retiredBy: 0, winner: 1, names: ['Ana', 'Luis'] });
+    const state: GameState = {
+      ...base,
+      gameId: 'retired-game-1',
+      players: [
+        { ...base.players[0], profileId: ana.id, correctAnswers: 2, incorrectAnswers: 1 },
+        { ...base.players[1], profileId: luis.id, correctAnswers: 1, incorrectAnswers: 0 },
+      ],
+    };
+
+    renderResults(state);
+
+    expect(screen.getByTestId('winner-name')).toHaveTextContent('¡Gana Luis!');
+    expect(screen.getByTestId('retirement-note')).toHaveTextContent('Ana se retiró');
+    expect(screen.getByTestId('retirement-line-0')).toHaveTextContent('sin recompensas');
+    // Winner: 1*10 + 20 + 30 XP · 1*3 + 10 + 15 coins.
+    expect(screen.getByTestId('reward-line-1')).toHaveTextContent('+60 XP');
+    expect(screen.getByTestId('reward-line-1')).toHaveTextContent('+28 monedas');
+  });
 });

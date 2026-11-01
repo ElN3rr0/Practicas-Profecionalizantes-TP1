@@ -88,6 +88,11 @@ describe('resolveWinner / duelo and contrarreloj', () => {
 
     expect(resolveWinner(state)).toBeNull();
   });
+
+  it('gives the win to the rival when a player retires', () => {
+    expect(resolveWinner(finishedGame({ retiredBy: 0, winner: 1 }))).toBe(1);
+    expect(resolveWinner(finishedGame({ retiredBy: 1, winner: 0 }))).toBe(0);
+  });
 });
 
 describe('resolveWinner / unfinished game', () => {

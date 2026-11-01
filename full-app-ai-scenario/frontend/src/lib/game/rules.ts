@@ -51,6 +51,11 @@ export function seriesChampion(wins: readonly [number, number]): 0 | 1 | null {
   return null;
 }
 
+/** Fair coin for who opens the game; injectable so callers can pin it in tests. */
+export function startingTurn(random: () => number = Math.random): 0 | 1 {
+  return random() < 0.5 ? 0 : 1;
+}
+
 /** The player with more points in a round; a tied round credits nobody. */
 export function roundWinner(points: readonly [number, number]): 0 | 1 | null {
   if (points[0] === points[1]) return null;
@@ -67,6 +72,7 @@ export function withCrown(crowns: readonly CategoryName[], category: CategoryNam
  * round, so a finished game always has a decided round count.
  */
 export function isGameOver(state: GameState): boolean {
+  if (state.retiredBy !== null) return true;
   if (state.config.mode === 'coronas') return crownWinner(state.players) !== null;
   if (state.config.mode === 'duelo') return duelWinner(state.players) !== null;
   if (state.config.mode === 'contrarreloj') return state.clock <= 0;
@@ -79,6 +85,7 @@ export function isGameOver(state: GameState): boolean {
  * always names a player.
  */
 export function stateWinner(state: GameState): 0 | 1 | null {
+  if (state.retiredBy !== null) return state.retiredBy === 0 ? 1 : 0;
   if (state.config.mode === 'coronas') return crownWinner(state.players);
   if (state.config.mode === 'duelo') return duelWinner(state.players);
   if (state.config.mode === 'contrarreloj') return timeWinner(state.players);

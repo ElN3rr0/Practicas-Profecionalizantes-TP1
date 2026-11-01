@@ -14,6 +14,7 @@ import {
   TALLY_TO_EARN_CROWN,
   isGameOver,
   roundWinner,
+  startingTurn,
   stateWinner,
   timeWinner,
   withCrown,
@@ -115,6 +116,7 @@ export function createInitialState(): GameState {
     roundWins: [0, 0],
     seriesWins: [0, 0],
     clock: CONTRARRELOJ_SECONDS,
+    retiredBy: null,
     winner: null,
     ultraChallenge: null,
     status: 'setup',
@@ -177,6 +179,7 @@ function startGameState(
     roundWins: [0, 0],
     seriesWins: resetSeries || state.config.tournament !== true ? [0, 0] : state.seriesWins,
     clock: CONTRARRELOJ_SECONDS,
+    retiredBy: null,
     winner: null,
     ultraChallenge: null,
     status: 'spinning',
@@ -248,6 +251,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+/** Adds one series win to `winner` when the tournament flag is on. */
+function creditedSeries(state: GameState, winner: 0 | 1 | null): [number, number] {
+  if (state.config.tournament !== true || winner === null) return state.seriesWins;
+  return [
+    state.seriesWins[0] + (winner === 0 ? 1 : 0),
+    state.seriesWins[1] + (winner === 1 ? 1 : 0),
+  ];
+}
+
 /**
  * Advances the contrarreloj clock. Reaching zero ends the game on the score, so the
  * wheel and the question screen stop as soon as time runs out.
@@ -261,12 +273,7 @@ function tickClock(state: GameState): GameState {
 
   const next: GameState = { ...state, clock };
   const winner = timeWinner(next.players);
-  const seriesWins: [number, number] =
-    next.config.tournament === true && winner !== null
-      ? [next.seriesWins[0] + (winner === 0 ? 1 : 0), next.seriesWins[1] + (winner === 1 ? 1 : 0)]
-      : next.seriesWins;
-
-  return { ...next, status: 'ended', winner, seriesWins };
+  return { ...next, status: 'ended', winner, seriesWins: creditedSeries(next, winner) };
 }
 
 /** A pure transition that also reports what the caller must do next. */
@@ -304,13 +311,8 @@ function settle(state: GameState): Step<AnswerOutcome> {
   if (!isGameOver(state)) return { state, value: 'continue' };
 
   const winner = stateWinner(state);
-  const seriesWins: [number, number] =
-    state.config.tournament === true && winner !== null
-      ? [state.seriesWins[0] + (winner === 0 ? 1 : 0), state.seriesWins[1] + (winner === 1 ? 1 : 0)]
-      : state.seriesWins;
-
   return {
-    state: { ...state, status: 'ended', winner, seriesWins },
+    state: { ...state, status: 'ended', winner, seriesWins: creditedSeries(state, winner) },
     value: 'ended',
   };
 }
@@ -512,6 +514,29 @@ export function resolveGameEnd(state: GameState): Step<boolean> {
   return { state: result.state, value: result.value === 'ended' };
 }
 
+/**
+ * The current player withdraws. The rival takes the game, the series credit when a
+ * tournament is on, and the retiree is recorded so rewards can skip completion.
+ */
+export function resolveForfeit(state: GameState): Step<boolean> {
+  if (state.status === 'setup' || state.status === 'ended' || state.retiredBy !== null) {
+    return { state, value: false };
+  }
+
+  const retiredBy = state.currentTurn;
+  const winner: 0 | 1 = retiredBy === 0 ? 1 : 0;
+  return {
+    state: {
+      ...state,
+      status: 'ended',
+      winner,
+      retiredBy,
+      seriesWins: creditedSeries(state, winner),
+    },
+    value: true,
+  };
+}
+
 export interface GameContextValue {
   state: GameState;
   setPlayer: (
@@ -537,6 +562,8 @@ export interface GameContextValue {
   startUltraChallenge: (category: CategoryName) => boolean;
   resolveUltra: (isCorrect: boolean, options?: { allowSecondChance?: boolean }) => AnswerOutcome;
   endGame: () => boolean;
+  /** The current player withdraws and the rival wins. */
+  forfeit: () => boolean;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -603,10 +630,9 @@ export function GameProvider({
 
   const startGame = useCallback(
     (options?: { resetSeries?: boolean }): boolean => {
-      const currentTurn: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
       dispatch({
         type: 'game/start',
-        currentTurn,
+        currentTurn: startingTurn(),
         gameId: newId(),
         resetSeries: options?.resetSeries,
       });
@@ -669,6 +695,8 @@ export function GameProvider({
 
   const endGame = useCallback((): boolean => transition(resolveGameEnd), [transition]);
 
+  const forfeit = useCallback((): boolean => transition(resolveForfeit), [transition]);
+
   const value = useMemo(
     () => ({
       state,
@@ -685,6 +713,7 @@ export function GameProvider({
       startUltraChallenge,
       resolveUltra,
       endGame,
+      forfeit,
     }),
     [
       state,
@@ -701,6 +730,7 @@ export function GameProvider({
       startUltraChallenge,
       resolveUltra,
       endGame,
+      forfeit,
     ],
   );
 

@@ -70,6 +70,8 @@ export type GameState = {
   seriesWins: [number, number];
   /** Seconds left in a contrarreloj game; unused by the other modes. */
   clock: number;
+  /** Player who retired; the rival is declared the winner. */
+  retiredBy: 0 | 1 | null;
   winner: 0 | 1 | null;
   ultraChallenge: CategoryName | null;
   status: GameStatus;

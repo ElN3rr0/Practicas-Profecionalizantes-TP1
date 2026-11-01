@@ -13,6 +13,7 @@ import {
   isGameOver,
   roundWinner,
   seriesChampion,
+  startingTurn,
   stateWinner,
   timeWinner,
   withCrown,
@@ -94,6 +95,15 @@ describe('seriesChampion', () => {
   });
 });
 
+describe('startingTurn', () => {
+  it('splits the coin at 0.5 and honours the random source', () => {
+    expect(startingTurn(() => 0.1)).toBe(0);
+    expect(startingTurn(() => 0.49)).toBe(0);
+    expect(startingTurn(() => 0.5)).toBe(1);
+    expect(startingTurn(() => 0.9)).toBe(1);
+  });
+});
+
 describe('isGameOver', () => {
   it('is driven by the crowns in coronas mode', () => {
     expect(isGameOver(readyGame())).toBe(false);
@@ -109,6 +119,13 @@ describe('isGameOver', () => {
   it('ends a contrarreloj game exactly at zero', () => {
     expect(isGameOver({ ...readyGame({ mode: 'contrarreloj' }), clock: 1 })).toBe(false);
     expect(isGameOver({ ...readyGame({ mode: 'contrarreloj' }), clock: 0 })).toBe(true);
+  });
+
+  it('ends as soon as a player retires', () => {
+    const retired = { ...readyGame(), retiredBy: 0 as const };
+    expect(isGameOver(retired)).toBe(true);
+    expect(stateWinner(retired)).toBe(1);
+    expect(stateWinner({ ...retired, retiredBy: 1 as const })).toBe(0);
   });
 
   it('ends a rondas game only after the tenth round with a decided round count', () => {

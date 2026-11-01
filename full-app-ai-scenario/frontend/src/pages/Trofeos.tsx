@@ -40,12 +40,23 @@ export default function Trofeos() {
         <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight text-light-text">
           Sala de Trofeos
         </h1>
-        <Link
-          to={`/tienda/${profile.id}`}
-          className="rounded-xl border border-plum bg-[#1a1120] px-4 py-2 font-display text-[11px] font-semibold uppercase tracking-wider text-light-text transition-all hover:bg-[#241830]"
-        >
-          Tienda
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/usuarios"
+            className="flex items-center gap-1.5 rounded-xl border border-[#2a2a2a] bg-[#101010] px-4 py-2 font-display text-[11px] font-semibold uppercase tracking-wider text-[#a0a0a0] transition-all hover:text-light-text"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
+              group
+            </span>
+            Volver a los perfiles
+          </Link>
+          <Link
+            to={`/tienda/${profile.id}`}
+            className="rounded-xl border border-plum bg-[#1a1120] px-4 py-2 font-display text-[11px] font-semibold uppercase tracking-wider text-light-text transition-all hover:bg-[#241830]"
+          >
+            Tienda
+          </Link>
+        </div>
       </div>
       <p className="mt-1 text-xs text-[#9A9A9A]">
         {profile.name} · Nivel {level} · {unlocked.size} / {ACHIEVEMENTS.length} insignias

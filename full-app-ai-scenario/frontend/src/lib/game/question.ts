@@ -2,6 +2,9 @@ import type { Question } from '../api/types';
 
 export const QUESTIONS_PER_ROUND = 4;
 
+/** Questions fetched per request so the round can be drawn from a wide pool. */
+export const QUESTIONS_POOL_SIZE = 40;
+
 /** Wrong options the 50/50 comodín removes, leaving one correct and one wrong. */
 export const ELIMINATED_BY_FIFTY_FIFTY = 2;
 
@@ -43,24 +46,36 @@ export function shuffle<T>(items: readonly T[], random: () => number = Math.rand
 }
 
 /**
- * Builds the four-option round from a category page: the first answerable question
- * supplies the statement and the correct option, and the next three distinct answers
- * become the distractors. Returns `null` when the page cannot yield four options.
+ * Builds the four-option round from a category page. A randomly picked answerable
+ * question supplies the statement and the correct option; the remaining questions
+ * supply three distinct wrong answers. `excludeStatement` keeps the previous question
+ * out when the player spends "Pasa la pregunta". Returns `null` when the page cannot
+ * yield four options.
  */
 export function buildQuestionRound(
   questions: readonly Question[],
   random: () => number = Math.random,
+  excludeStatement?: string,
 ): QuestionRound | null {
   // The category endpoint answers with an error object (not an array) when it has no
   // rows; treat any non-array as "no usable questions" instead of throwing.
   if (!Array.isArray(questions)) return null;
-  const pool = questions.filter(isAnswerable);
-  const [correct] = pool;
+
+  let pool = questions.filter(isAnswerable);
+  if (excludeStatement !== undefined) {
+    const withoutExcluded = pool.filter(
+      (question) => question.question.trim() !== excludeStatement.trim(),
+    );
+    if (withoutExcluded.length >= QUESTIONS_PER_ROUND) pool = withoutExcluded;
+  }
+
+  const shuffled = shuffle(pool, random);
+  const [correct] = shuffled;
   if (correct === undefined) return null;
 
   const correctAnswer = correct.answer.trim();
   const distractors: string[] = [];
-  for (const candidate of pool.slice(1)) {
+  for (const candidate of shuffled.slice(1)) {
     const answer = candidate.answer.trim();
     if (answer === correctAnswer || distractors.includes(answer)) continue;
     distractors.push(answer);

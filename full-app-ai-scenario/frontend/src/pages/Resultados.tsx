@@ -46,10 +46,12 @@ export default function Resultados() {
         incorrectAnswers: player.incorrectAnswers,
         bestStreak: player.bestStreak,
         isWinner: winner !== null && winner === player.id,
+        // A retiree played, but does not earn the completion bonus.
+        completed: state.retiredBy === null || player.id !== state.retiredBy,
       })),
     });
     setRewards(outcomes);
-  }, [state.status, state.gameId, state.players, winner, deliverGameRewards]);
+  }, [state.status, state.gameId, state.players, state.retiredBy, winner, deliverGameRewards]);
 
   useEffect(() => {
     if (rewards.length === 0) return;
@@ -81,6 +83,22 @@ export default function Resultados() {
   return (
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-8 sm:py-10">
       <WinnerBanner player={winnerPlayer} mode={state.config.mode} roundWins={state.roundWins} />
+
+      {state.retiredBy !== null && (
+        <p
+          data-testid="retirement-note"
+          className="mt-4 rounded-2xl border border-[#ffb703]/40 bg-[#24132c] px-4 py-3 text-center text-xs text-[#ffd166]"
+        >
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined mr-1 align-[-3px] text-[15px]"
+          >
+            logout
+          </span>
+          {state.players[state.retiredBy].name} se retiró: la victoria es para{' '}
+          {state.players[state.retiredBy === 0 ? 1 : 0].name}.
+        </p>
+      )}
 
       {tournament && (
         <div
@@ -146,9 +164,21 @@ export default function Resultados() {
               </div>
 
               {outcome ? (
-                <p className="mt-1 text-xs text-[#a09aa7]" data-testid={`reward-line-${player.id}`}>
-                  +{outcome.xp} XP <span className="px-1">·</span> +{outcome.coins} monedas
-                </p>
+                outcome.xp === 0 && outcome.coins === 0 ? (
+                  <p
+                    className="mt-1 text-xs text-[#777777]"
+                    data-testid={`retirement-line-${player.id}`}
+                  >
+                    Se retiró: sin recompensas de finalización.
+                  </p>
+                ) : (
+                  <p
+                    className="mt-1 text-xs text-[#a09aa7]"
+                    data-testid={`reward-line-${player.id}`}
+                  >
+                    +{outcome.xp} XP <span className="px-1">·</span> +{outcome.coins} monedas
+                  </p>
+                )
               ) : (
                 <p className="mt-1 text-xs text-[#777777]">
                   {profile ? 'Recompensas ya registradas.' : 'Invitado: no se guardan recompensas.'}

@@ -243,4 +243,49 @@ describe('ProfilesProvider', () => {
     expect(buy.ok).toBe(false);
     expect(result.current.getProfile(id)?.totalCoins).toBe(0);
   });
+
+  it('skips completion rewards for a retiring player but still records the loss', () => {
+    const { result } = setup();
+    let anaId = '';
+    let luisId = '';
+    act(() => {
+      anaId = result.current.createProfile('Ana').id;
+      luisId = result.current.createProfile('Luis').id;
+    });
+
+    let outcomes: ReturnType<typeof result.current.deliverGameRewards> = [];
+    act(() => {
+      outcomes = result.current.deliverGameRewards({
+        gameId: 'retired-game',
+        completed: true,
+        players: [
+          {
+            profileId: anaId,
+            correctAnswers: 2,
+            incorrectAnswers: 1,
+            bestStreak: 1,
+            isWinner: false,
+            completed: false,
+          },
+          {
+            profileId: luisId,
+            correctAnswers: 1,
+            incorrectAnswers: 0,
+            bestStreak: 1,
+            isWinner: true,
+          },
+        ],
+      });
+    });
+
+    const ana = result.current.getProfile(anaId);
+    const luis = result.current.getProfile(luisId);
+    expect(outcomes.find((outcome) => outcome.profileId === anaId)?.xp).toBe(0);
+    expect(ana?.totalXp).toBe(0);
+    expect(ana?.totalCoins).toBe(0);
+    expect(ana?.stats).toMatchObject({ gamesPlayed: 1, losses: 1, correctAnswers: 2 });
+    // Winner: 1*10 + 20 + 30 XP · 1*3 + 10 + 15 coins.
+    expect(luis?.totalXp).toBe(60);
+    expect(luis?.totalCoins).toBe(28);
+  });
 });

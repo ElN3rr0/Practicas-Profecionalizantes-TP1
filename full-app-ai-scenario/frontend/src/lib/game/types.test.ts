@@ -76,6 +76,7 @@ describe('game state types', () => {
       roundWins: [0, 0],
       seriesWins: [0, 0],
       clock: 90,
+      retiredBy: null,
       winner: null,
       ultraChallenge: 'historia',
       status: 'answering',

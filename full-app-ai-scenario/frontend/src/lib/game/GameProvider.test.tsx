@@ -6,6 +6,7 @@ import {
   gameReducer,
   GameProvider,
   resolveAnswer,
+  resolveForfeit,
   useGame,
 } from './GameProvider';
 import type { GameAction } from './GameProvider';
@@ -495,5 +496,31 @@ describe('gameReducer / Phase 3 modes', () => {
         config: { ...inSeries.config, timePerTurn: 30 },
       }).seriesWins,
     ).toEqual([1, 0]);
+  });
+});
+
+describe('resolveForfeit', () => {
+  it('ends the game and gives the win to the rival', () => {
+    const step = resolveForfeit(readyGame({ mode: 'coronas' }, 0));
+
+    expect(step.value).toBe(true);
+    expect(step.state.status).toBe('ended');
+    expect(step.state.winner).toBe(1);
+    expect(step.state.retiredBy).toBe(0);
+  });
+
+  it('credits the series when a tournament is on', () => {
+    const step = resolveForfeit(readyGame({ mode: 'duelo', tournament: true }, 1));
+
+    expect(step.state.winner).toBe(0);
+    expect(step.state.seriesWins).toEqual([1, 0]);
+  });
+
+  it('is a no-op once the game has ended', () => {
+    const ended = { ...readyGame(), status: 'ended' as const, winner: 0 as const };
+    const step = resolveForfeit(ended);
+
+    expect(step.value).toBe(false);
+    expect(step.state).toEqual(ended);
   });
 });

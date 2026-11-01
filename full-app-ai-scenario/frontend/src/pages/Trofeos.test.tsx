@@ -68,4 +68,13 @@ describe('Trofeos', () => {
 
     expect(screen.getByTestId('empty-inventory')).toHaveTextContent('Todavía no compraste objetos');
   });
+
+  it('links back to the profile selection', () => {
+    renderTrophies(createEmptyProfile('Ana'));
+
+    expect(screen.getByRole('link', { name: 'Volver a los perfiles' })).toHaveAttribute(
+      'href',
+      '/usuarios',
+    );
+  });
 });

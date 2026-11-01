@@ -7,6 +7,7 @@ import { CATEGORY_COLORS, CATEGORY_LABELS } from '../lib/constants/categories';
 import { GameProvider, useGame } from '../lib/game/GameProvider';
 import { SPIN_DURATION_MS, WHEEL_CATEGORIES } from '../lib/game/spin';
 import type { GameState } from '../lib/game/types';
+import { readyGame } from '../test/gameState';
 import Pregunta from './Pregunta';
 import Ruleta from './Ruleta';
 
@@ -221,6 +222,28 @@ describe('Ruleta', () => {
 
     expect(screen.getAllByTestId('wheel-segment')).toHaveLength(6);
     expect(segmentFills()).toEqual(canonicalFills);
+  });
+
+  it('lets the current player retire and hands the win to the rival', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(
+      <GameProvider initialState={readyGame()}>
+        <MemoryRouter initialEntries={['/ruleta']}>
+          <StateProbe />
+          <LocationProbe />
+          <Routes>
+            <Route path="/ruleta" element={<Ruleta />} />
+            <Route path="/resultados" element={<div>resultados</div>} />
+          </Routes>
+        </MemoryRouter>
+      </GameProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retirarse' }));
+
+    expect(readState().retiredBy).toBe(0);
+    expect(readState().winner).toBe(1);
+    expect(pathname()).toBe('/resultados');
   });
 
   it('shows the turn indicator on the active player and a waiting state on the other', async () => {

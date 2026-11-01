@@ -66,4 +66,15 @@ describe('Tienda', () => {
 
     expect(screen.getByText(/Elegí un perfil/)).toBeInTheDocument();
   });
+
+  it('links back to the profile selection', () => {
+    const profile = createEmptyProfile('Ana');
+    saveProfiles([profile]);
+    renderShop(profile.id);
+
+    expect(screen.getByRole('link', { name: 'Volver a los perfiles' })).toHaveAttribute(
+      'href',
+      '/usuarios',
+    );
+  });
 });

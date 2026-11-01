@@ -13,7 +13,7 @@ import type { SoundCue } from '../lib/audio/types';
 import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '../lib/constants/categories';
 import { useGame } from '../lib/game/GameProvider';
 import {
-  QUESTIONS_PER_ROUND,
+  QUESTIONS_POOL_SIZE,
   buildQuestionRound,
   eliminationIndexes,
   type QuestionRound,
@@ -91,6 +91,7 @@ export default function Pregunta() {
     pickCrown,
     startUltraChallenge,
     resolveUltra,
+    forfeit,
   } = useGame();
 
   const category: CategoryName | null = state.ultraChallenge ?? state.currentCategory;
@@ -112,6 +113,7 @@ export default function Pregunta() {
 
   const resolvedRef = useRef(true);
   const usedPowerupsRef = useRef<Set<PowerupId>>(new Set());
+  const excludeStatementRef = useRef<string | null>(null);
 
   const skip = category === null ? 0 : (cursors[category] ?? 0);
   const timePerTurn = state.config.timePerTurn;
@@ -138,13 +140,33 @@ export default function Pregunta() {
     setTimerTotal(timePerTurn);
 
     getQuestionsByCategory(category, {
-      limit: QUESTIONS_PER_ROUND,
+      limit: QUESTIONS_POOL_SIZE,
       ...(skip > 0 ? { skip } : {}),
       lang: language,
     })
-      .then((questions) => {
+      .then(async (questions) => {
         if (cancelled) return;
-        const next = buildQuestionRound(questions);
+        let next = buildQuestionRound(
+          questions,
+          Math.random,
+          excludeStatementRef.current ?? undefined,
+        );
+
+        // A page past the end of a small category comes back short; retry from the top.
+        if (next === null && skip > 0) {
+          const fallback = await getQuestionsByCategory(category, {
+            limit: QUESTIONS_POOL_SIZE,
+            lang: language,
+          });
+          if (cancelled) return;
+          next = buildQuestionRound(
+            fallback,
+            Math.random,
+            excludeStatementRef.current ?? undefined,
+          );
+        }
+
+        excludeStatementRef.current = null;
         setQuestion(next);
         setLoad(next === null ? 'insufficient' : 'ready');
         resolvedRef.current = next === null;
@@ -307,6 +329,7 @@ export default function Pregunta() {
         setTimerTotal((total) => Math.max(total, extended));
       }
       if (id === 'skip-question' && category !== null) {
+        excludeStatementRef.current = question.statement;
         setCursors((current) => ({ ...current, [category]: (current[category] ?? 0) + 1 }));
       }
       playSound('powerup');
@@ -334,6 +357,19 @@ export default function Pregunta() {
     },
     [startUltraChallenge],
   );
+
+  /** The current player withdraws; the rival takes the game. */
+  const handleForfeit = useCallback(() => {
+    const rival = state.players[state.currentTurn === 0 ? 1 : 0];
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`¿Retirarte? La partida se le da a ${rival.name}.`)
+    ) {
+      return;
+    }
+    if (!forfeit()) return;
+    navigate('/resultados');
+  }, [forfeit, navigate, state.currentTurn, state.players]);
 
   const roundLabel = roundBadgeLabel(state.round, state.config.mode);
 
@@ -463,15 +499,16 @@ export default function Pregunta() {
                 </div>
 
                 <div className="relative z-10 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                  <Link
-                    to="/ruleta"
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-plum bg-[#1a1120] px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-wider text-light-text transition-all hover:bg-[#241830]"
+                  <button
+                    type="button"
+                    onClick={handleForfeit}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-[#E63946]/50 bg-[#2a0f14] px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-wider text-[#ff8a94] transition-all hover:bg-[#3a1219]"
                   >
                     <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
-                      arrow_back
+                      logout
                     </span>
-                    Volver a la Ruleta
-                  </Link>
+                    Retirarse
+                  </button>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button

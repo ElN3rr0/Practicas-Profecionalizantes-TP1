@@ -73,8 +73,8 @@ export default function GameConfigPanel() {
   const setLanguage = (language: Language) => setConfig({ ...config, language });
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">
+    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="flex flex-col rounded-xl border border-[#202020] bg-[#101010] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className={sectionTitle}>Idioma / Language</h2>
         </div>
@@ -100,7 +100,7 @@ export default function GameConfigPanel() {
           })}
         </div>
       </section>
-      <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">
+      <section className="flex flex-col rounded-xl border border-[#202020] bg-[#101010] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className={sectionTitle}>Modo de Juego</h2>
         </div>
@@ -152,7 +152,7 @@ export default function GameConfigPanel() {
         </button>
       </section>
 
-      <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">
+      <section className="flex flex-col rounded-xl border border-[#202020] bg-[#101010] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className={sectionTitle}>Tiempo por Turno</h2>
           <span className="text-[11px] text-[#777777]">Segundos</span>

@@ -19,6 +19,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
  */
 export function resolveWinner(state: GameState): 0 | 1 | null {
   if (state.status !== 'ended') return null;
+  if (state.retiredBy !== null) return state.retiredBy === 0 ? 1 : 0;
   if (state.config.mode === 'coronas') return crownWinner(state.players);
   if (state.config.mode === 'duelo') return duelWinner(state.players);
   if (state.config.mode === 'contrarreloj') return timeWinner(state.players);

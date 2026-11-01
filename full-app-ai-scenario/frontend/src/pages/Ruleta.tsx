@@ -43,7 +43,7 @@ function normalizeCategories(list: Category[]): CategoryName[] | null {
 
 export default function Ruleta() {
   const navigate = useNavigate();
-  const { state, spin, land } = useGame();
+  const { state, spin, land, forfeit } = useGame();
 
   const [categories, setCategories] = useState<CategoryName[]>(() => [...WHEEL_CATEGORIES]);
   const [rotation, setRotation] = useState(0);
@@ -101,6 +101,18 @@ export default function Ruleta() {
     setShowResult(false);
   }, []);
 
+  const handleForfeit = useCallback(() => {
+    const rival = state.players[state.currentTurn === 0 ? 1 : 0];
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`¿Retirarte? La partida se le da a ${rival.name}.`)
+    ) {
+      return;
+    }
+    if (!forfeit()) return;
+    navigate('/resultados');
+  }, [forfeit, navigate, state.currentTurn, state.players]);
+
   const currentCategory = state.currentCategory;
   const statusLabel = isSpinning
     ? '¡Girando la ruleta a máxima velocidad!'
@@ -115,8 +127,8 @@ export default function Ruleta() {
           ¡Gran Ruleta Arcade!
         </h1>
         <p className="mt-1 text-xs font-normal text-[#9A9A9A] sm:text-sm">
-          {state.players[state.currentTurn].name} tiene el pulsador listo. ¡Haz girar la rueda y
-          descifra la pregunta!
+          Empieza {state.players[state.currentTurn].name} · tiene el pulsador listo. ¡Haz girar la
+          rueda y descifra la pregunta!
         </p>
       </div>
 
@@ -183,6 +195,17 @@ export default function Ruleta() {
               {state.config.timePerTurn}s turno
             </span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleForfeit}
+            className="mt-2 flex w-full max-w-md items-center justify-center gap-1.5 rounded-xl border border-[#E63946]/50 bg-[#2a0f14] px-4 py-2.5 font-display text-[11px] font-semibold uppercase tracking-wider text-[#ff8a94] transition-all hover:bg-[#3a1219]"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
+              logout
+            </span>
+            Retirarse
+          </button>
         </div>
 
         <div className="order-3 lg:col-span-3">

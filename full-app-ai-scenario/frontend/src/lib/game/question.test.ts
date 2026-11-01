@@ -11,6 +11,7 @@ const PAGE: Question[] = [
   question(2, '¿En qué museo vive la Gioconda?', 'El Louvre'),
   question(3, '¿Quién pintó el Guernica?', 'Picasso'),
   question(4, '¿Quién pintó La noche estrellada?', 'Van Gogh'),
+  question(5, '¿Quién esculpió el David?', 'Miguel Ángel'),
 ];
 
 function alwaysLast(): number {
@@ -48,8 +49,9 @@ describe('buildQuestionRound', () => {
     const round = buildQuestionRound(PAGE, () => 0);
 
     expect(round).not.toBeNull();
-    expect(round?.options[round?.correctIndex ?? -1]).toBe('Leonardo da Vinci');
-    expect(round?.options.filter((option) => option === 'Leonardo da Vinci')).toHaveLength(1);
+    expect(round?.statement).toBe('¿En qué museo vive la Gioconda?');
+    expect(round?.options[round?.correctIndex ?? -1]).toBe('El Louvre');
+    expect(round?.options.filter((option) => option === 'El Louvre')).toHaveLength(1);
   });
 
   it('tracks the correct index after the shuffle', () => {
@@ -59,6 +61,27 @@ describe('buildQuestionRound', () => {
     const correctIndex = round?.correctIndex ?? -1;
     expect(correctIndex).toBeGreaterThanOrEqual(0);
     expect(round?.options[correctIndex]).toBe('Leonardo da Vinci');
+  });
+
+  it('can pick any question from the page, not always the first', () => {
+    const first = buildQuestionRound(PAGE, alwaysLast);
+    const later = buildQuestionRound(PAGE, () => 0);
+
+    expect(first?.statement).toBe('¿Quién pintó la Gioconda?');
+    expect(later?.statement).toBe('¿En qué museo vive la Gioconda?');
+  });
+
+  it('excludes the previous question when the pool is large enough', () => {
+    const round = buildQuestionRound(PAGE, alwaysLast, '¿Quién pintó la Gioconda?');
+
+    expect(round?.statement).not.toBe('¿Quién pintó la Gioconda?');
+    expect(round?.statement).toBe('¿En qué museo vive la Gioconda?');
+  });
+
+  it('ignores the exclusion when it would leave fewer than four questions', () => {
+    const round = buildQuestionRound(PAGE.slice(0, 4), alwaysLast, '¿Quién pintó la Gioconda?');
+
+    expect(round?.statement).toBe('¿Quién pintó la Gioconda?');
   });
 
   it('uses only the answers of the other questions as distractors', () => {
