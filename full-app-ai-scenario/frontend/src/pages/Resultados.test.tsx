@@ -4,6 +4,8 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { playSound } from '../lib/audio';
 import { createInitialState, GameProvider, useGame } from '../lib/game/GameProvider';
+import { ProfilesProvider } from '../lib/profiles/ProfilesProvider';
+import { createEmptyProfile, PROFILES_STORAGE_KEY, saveProfiles } from '../lib/profiles/storage';
 import { WHEEL_CATEGORIES } from '../lib/game/spin';
 import type { GameState } from '../lib/game/types';
 import { finishedGame } from '../test/gameState';
@@ -17,6 +19,7 @@ const playMock = vi.mocked(playSound);
 
 beforeEach(() => {
   playMock.mockReset();
+  localStorage.clear();
 });
 
 const EVERY_CROWN = [...WHEEL_CATEGORIES];
@@ -33,13 +36,15 @@ function LocationProbe() {
 
 function renderResults(initialState?: GameState) {
   return render(
-    <GameProvider initialState={initialState}>
-      <MemoryRouter initialEntries={['/resultados']}>
-        <StateProbe />
-        <LocationProbe />
-        <AppRoutes />
-      </MemoryRouter>
-    </GameProvider>,
+    <ProfilesProvider>
+      <GameProvider initialState={initialState}>
+        <MemoryRouter initialEntries={['/resultados']}>
+          <StateProbe />
+          <LocationProbe />
+          <AppRoutes />
+        </MemoryRouter>
+      </GameProvider>
+    </ProfilesProvider>,
   );
 }
 
@@ -169,5 +174,108 @@ describe('Resultados', () => {
     renderResults();
 
     expect(playMock.mock.calls).toEqual([['defeat']]);
+  });
+
+  it('pays winner and loser exactly once when the game finishes', () => {
+    const ana = createEmptyProfile('Ana');
+    const luis = createEmptyProfile('Luis');
+    saveProfiles([ana, luis]);
+
+    const base = finishedGame({ mode: 'coronas', winner: 0, crowns: [EVERY_CROWN, []] });
+    const state: GameState = {
+      ...base,
+      gameId: 'game-pay-1',
+      players: [
+        {
+          ...base.players[0],
+          profileId: ana.id,
+          correctAnswers: 8,
+          incorrectAnswers: 1,
+          bestStreak: 4,
+        },
+        {
+          ...base.players[1],
+          profileId: luis.id,
+          correctAnswers: 1,
+          incorrectAnswers: 2,
+          bestStreak: 1,
+        },
+      ],
+    };
+
+    const first = renderResults(state);
+
+    // Winner: 8*10 + 20 + 30 = 130 XP · 8*3 + 10 + 15 = 49 coins
+    expect(screen.getByTestId('reward-line-0')).toHaveTextContent('+130 XP');
+    expect(screen.getByTestId('reward-line-0')).toHaveTextContent('+49 monedas');
+    // Level 2 threshold is 100 XP, so the winner levels up.
+    expect(screen.getByTestId('level-up-2')).toBeInTheDocument();
+    // Loser: 1*10 + 20 = 30 XP · 1*3 + 10 = 13 coins
+    expect(screen.getByTestId('reward-line-1')).toHaveTextContent('+30 XP');
+    expect(screen.getByTestId('reward-line-1')).toHaveTextContent('+13 monedas');
+
+    const readStored = () =>
+      JSON.parse(localStorage.getItem(PROFILES_STORAGE_KEY) ?? '[]') as {
+        id: string;
+        totalXp: number;
+        totalCoins: number;
+      }[];
+
+    expect(readStored().find((profile) => profile.id === ana.id)?.totalXp).toBe(130);
+    expect(readStored().find((profile) => profile.id === luis.id)?.totalXp).toBe(30);
+
+    // The winner's first win unlocks the "Primera victoria" badge.
+    expect(screen.getByTestId('new-achievements-0')).toHaveTextContent('Primera victoria');
+
+    // Re-rendering the same finished game must not pay again.
+    first.unmount();
+    renderResults(state);
+
+    expect(readStored().find((profile) => profile.id === ana.id)?.totalXp).toBe(130);
+    expect(readStored().find((profile) => profile.id === luis.id)?.totalXp).toBe(30);
+  });
+
+  it('shows the tournament series and starts the next game keeping the score', () => {
+    renderResults(
+      finishedGame({
+        mode: 'coronas',
+        winner: 0,
+        crowns: [EVERY_CROWN, []],
+        tournament: true,
+        seriesWins: [1, 0],
+        names: ['Ana', 'Luis'],
+      }),
+    );
+
+    expect(screen.getByTestId('series-score')).toHaveTextContent('Torneo al mejor de 3');
+    expect(screen.getByTestId('series-score')).toHaveTextContent('1 — 0');
+    expect(screen.queryByTestId('series-champion')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente partida del torneo' }));
+
+    expect(pathname()).toBe('/ruleta');
+    expect(readState().status).toBe('spinning');
+    expect(readState().seriesWins).toEqual([1, 0]);
+  });
+
+  it('declares the series champion and resets the series on a new tournament', () => {
+    renderResults(
+      finishedGame({
+        mode: 'coronas',
+        winner: 1,
+        crowns: [[], EVERY_CROWN],
+        tournament: true,
+        seriesWins: [0, 2],
+        names: ['Ana', 'Luis'],
+      }),
+    );
+
+    expect(screen.getByTestId('series-champion')).toHaveTextContent('¡Luis gana el torneo!');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo torneo' }));
+
+    expect(pathname()).toBe('/ruleta');
+    expect(readState().status).toBe('spinning');
+    expect(readState().seriesWins).toEqual([0, 0]);
   });
 });

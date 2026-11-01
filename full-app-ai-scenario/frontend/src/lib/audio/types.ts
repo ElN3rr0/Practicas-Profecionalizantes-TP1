@@ -10,7 +10,9 @@ export type SoundCue =
   | 'powerup'
   | 'ultra'
   | 'victory'
-  | 'defeat';
+  | 'defeat'
+  | 'level-up'
+  | 'achievement';
 
 /** Waveform of a single synthesized note. */
 export type NoteShape = 'sine' | 'square' | 'sawtooth' | 'triangle';

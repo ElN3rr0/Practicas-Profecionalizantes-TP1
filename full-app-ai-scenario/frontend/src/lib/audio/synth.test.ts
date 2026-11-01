@@ -33,7 +33,7 @@ describe('synth', () => {
     expect(master.connections).toContain(context.destination);
 
     const cues = cuesOf(CUE_NOTES);
-    expect(cues).toHaveLength(11);
+    expect(cues).toHaveLength(13);
 
     for (const cue of cues) {
       const before = context.oscillators.length;

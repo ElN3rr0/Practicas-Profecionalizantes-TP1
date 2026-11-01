@@ -1,4 +1,4 @@
-import { crownWinner, roundWinner } from './rules';
+import { crownWinner, duelWinner, roundWinner, timeWinner } from './rules';
 import { WHEEL_CATEGORIES } from './spin';
 import type { GameMode, GameState, Player } from './types';
 
@@ -6,6 +6,8 @@ import type { GameMode, GameState, Player } from './types';
 export const MODE_LABELS: Record<GameMode, string> = {
   coronas: '6 Coronas',
   rondas: '10 Rondas',
+  duelo: 'Duelo Definitivo',
+  contrarreloj: 'Contrarreloj',
 };
 
 /**
@@ -18,6 +20,8 @@ export const MODE_LABELS: Record<GameMode, string> = {
 export function resolveWinner(state: GameState): 0 | 1 | null {
   if (state.status !== 'ended') return null;
   if (state.config.mode === 'coronas') return crownWinner(state.players);
+  if (state.config.mode === 'duelo') return duelWinner(state.players);
+  if (state.config.mode === 'contrarreloj') return timeWinner(state.players);
 
   return roundWinner(state.roundWins) ?? 0;
 }
@@ -27,7 +31,8 @@ export function resolveWinner(state: GameState): 0 | 1 | null {
  * won carry no fixed denominator because a tied game plays past the tenth round.
  */
 export function modeAchievement(player: Player, mode: GameMode, roundsWon: number): string {
-  return mode === 'coronas'
-    ? `${player.crowns.length} de ${WHEEL_CATEGORIES.length} coronas`
-    : `${roundsWon} rondas ganadas`;
+  if (mode === 'coronas') return `${player.crowns.length} de ${WHEEL_CATEGORIES.length} coronas`;
+  if (mode === 'duelo') return 'Primer acierto';
+  if (mode === 'contrarreloj') return `${player.score} puntos`;
+  return `${roundsWon} rondas ganadas`;
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import {
   GameProvider,
-  gameReducer,
   resolveAnswer,
   resolveCrownPick,
   resolveGameEnd,
@@ -12,7 +11,7 @@ import {
   useGame,
 } from './GameProvider';
 import type { Step } from './GameProvider';
-import type { AnswerOutcome, GameState } from './types';
+import type { AnswerOutcome, CategoryName, GameState } from './types';
 import { patchPlayer, readyGame, withPowerups } from '../../test/gameState';
 
 const SIX_CROWNS = [
@@ -178,6 +177,42 @@ describe('2da Chance', () => {
   });
 });
 
+describe('per-game stats', () => {
+  it('counts a correct answer and updates the streak', () => {
+    const step = resolveAnswer(readyGame(), true);
+
+    expect(step.state.players[0].correctAnswers).toBe(1);
+    expect(step.state.players[0].incorrectAnswers).toBe(0);
+    expect(step.state.players[0].streak).toBe(1);
+    expect(step.state.players[0].bestStreak).toBe(1);
+  });
+
+  it('does not count a 2da Chance retry as a resolved question', () => {
+    const retried = resolveAnswer(retryReady(), false);
+
+    expect(retried.value).toBe('retry');
+    expect(retried.state.players[0].incorrectAnswers).toBe(0);
+    expect(retried.state.players[0].streak).toBe(0);
+  });
+
+  it('counts a final wrong answer and resets the streak but keeps the best', () => {
+    const state = patchPlayer(readyGame(), 0, { streak: 2, bestStreak: 2 });
+    const step = resolveAnswer(state, false);
+
+    expect(step.state.players[0].incorrectAnswers).toBe(1);
+    expect(step.state.players[0].streak).toBe(0);
+    expect(step.state.players[0].bestStreak).toBe(2);
+  });
+
+  it('grows the best streak on consecutive correct answers', () => {
+    const state = patchPlayer(readyGame(), 0, { streak: 2, bestStreak: 2 });
+    const step = resolveAnswer(state, true);
+
+    expect(step.state.players[0].streak).toBe(3);
+    expect(step.state.players[0].bestStreak).toBe(3);
+  });
+});
+
 describe('crown pick', () => {
   it('awards the chosen crown and closes the question', () => {
     const awaiting = resolveAnswer(patchPlayer(readyGame(), 0, { crownTally: 2 }), true);
@@ -212,83 +247,73 @@ describe('crown pick', () => {
 });
 
 describe('ultra desafío', () => {
-  it('opens once per turn with the chosen category', () => {
-    const state = readyGame();
-    const started = resolveUltraStart(state, 'historia');
-    const again = resolveUltraStart(started.state, 'ciencia');
+  /** The state right after a 3-win streak, before choosing a crown. */
+  function crownMoment(crowns: readonly CategoryName[] = []): GameState {
+    return {
+      ...patchPlayer(readyGame(), 0, { crownTally: 3, crowns: [...crowns] }),
+      awaitingCrown: true,
+    };
+  }
 
-    expect(started.value).toBe(true);
-    expect(started.state.ultraChallenge).toBe('historia');
-    expect(started.state.ultraUsed).toBe(true);
-    expect(again.value).toBe(false);
-    expect(again.state.ultraChallenge).toBe('historia');
-  });
-
-  it('stays spent for the turn across a re-land from the wheel', () => {
-    const started = resolveUltraStart(readyGame(), 'historia');
-    const won = resolveUltraAnswer(started.state, true);
-    const landedAgain = gameReducer(won.state, { type: 'game/land', category: 'arte' });
-    const second = resolveUltraStart(landedAgain, 'ciencia');
-
-    expect(won.state.currentTurn).toBe(0);
-    expect(landedAgain.currentTurn).toBe(0);
-    expect(second.value).toBe(false);
-    expect(second.state.ultraChallenge).toBeNull();
-    expect(second.state.currentTurn).toBe(0);
-  });
-
-  it('cannot start while a crown is owed or the game ended', () => {
-    const awaiting: GameState = { ...readyGame(), awaitingCrown: true };
+  it('is locked until the 3-win streak (not available anytime)', () => {
+    expect(resolveUltraStart(readyGame(), 'historia').value).toBe(false);
     const ended: GameState = { ...readyGame(), status: 'ended', winner: 0 };
-
-    expect(resolveUltraStart(awaiting, 'arte').value).toBe(false);
     expect(resolveUltraStart(ended, 'arte').value).toBe(false);
   });
 
-  it('grants the chosen crown on a win without scoring or passing the turn', () => {
-    const started = resolveUltraStart(readyGame(), 'historia');
+  it('opens at the 3-win moment and clears the owed crown', () => {
+    const started = resolveUltraStart(crownMoment(), 'historia');
+
+    expect(started.value).toBe(true);
+    expect(started.state.ultraChallenge).toBe('historia');
+    expect(started.state.awaitingCrown).toBe(false);
+    expect(started.state.ultraUsed).toBe(true);
+  });
+
+  it('grants the chosen crown and passes the turn on a win', () => {
+    const started = resolveUltraStart(crownMoment(), 'historia');
     const won = resolveUltraAnswer(started.state, true);
 
     expect(won.value).toBe('continue');
     expect(won.state.players[0].crowns).toEqual(['historia']);
-    expect(won.state.players[0].score).toBe(0);
     expect(won.state.players[0].crownTally).toBe(0);
-    expect(won.state.currentTurn).toBe(0);
+    expect(won.state.currentTurn).toBe(1);
     expect(won.state.ultraChallenge).toBeNull();
   });
 
-  it('resets the tally on a loss', () => {
-    const started = resolveUltraStart(patchPlayer(readyGame(), 0, { crownTally: 2 }), 'historia');
+  it('resets the tally and passes the turn on a loss', () => {
+    const started = resolveUltraStart(crownMoment(), 'historia');
     const lost = resolveUltraAnswer(started.state, false);
 
     expect(lost.value).toBe('continue');
     expect(lost.state.players[0].crownTally).toBe(0);
     expect(lost.state.players[0].crowns).toEqual([]);
-    expect(lost.state.currentTurn).toBe(0);
+    expect(lost.state.currentTurn).toBe(1);
     expect(lost.state.ultraChallenge).toBeNull();
   });
 
   it('offers the 2da Chance retry on the ultra question', () => {
     const withCharge = withPowerups(
-      patchPlayer(readyGame({ powerups: ['second-chance'] }), 0, { crownTally: 1 }),
+      patchPlayer(readyGame({ powerups: ['second-chance'] }), 0, { crownTally: 3 }),
       0,
       { 'second-chance': 1 },
     );
-    const started = resolveUltraStart(withCharge, 'ciencia');
+    const owed: GameState = { ...withCharge, awaitingCrown: true };
+    const started = resolveUltraStart(owed, 'ciencia');
     const retried = resolveUltraAnswer(started.state, false);
     const lost = resolveUltraAnswer(retried.state, false);
 
     expect(retried.value).toBe('retry');
     expect(retried.state.ultraChallenge).toBe('ciencia');
     expect(retried.state.players[0].powerups['second-chance']).toBe(0);
-    expect(retried.state.players[0].crownTally).toBe(1);
+    expect(retried.state.players[0].crownTally).toBe(3);
     expect(lost.value).toBe('continue');
     expect(lost.state.players[0].crownTally).toBe(0);
     expect(lost.state.ultraChallenge).toBeNull();
   });
 
   it('ends the game when the ultra win completes the six crowns', () => {
-    const five = patchPlayer(readyGame(), 0, { crowns: [...SIX_CROWNS].slice(0, 5) });
+    const five = crownMoment([...SIX_CROWNS].slice(0, 5));
     const started = resolveUltraStart(five, 'ciencia');
     const won = resolveUltraAnswer(started.state, true);
 
@@ -673,15 +698,9 @@ describe('GameProvider actions', () => {
     act(() => {
       started = result.current.startUltraChallenge('ciencia');
     });
-    expect(started).toBe(true);
-    expect(result.current.state.ultraChallenge).toBe('ciencia');
-
-    let ultraOutcome = 'none';
-    act(() => {
-      ultraOutcome = result.current.resolveUltra(true);
-    });
-    expect(ultraOutcome).toBe('continue');
-    expect(result.current.state.players[turn].crowns).toEqual(['ciencia']);
+    // The ultra is locked until the 3-win streak.
+    expect(started).toBe(false);
+    expect(result.current.state.ultraChallenge).toBeNull();
 
     let ended = false;
     act(() => {

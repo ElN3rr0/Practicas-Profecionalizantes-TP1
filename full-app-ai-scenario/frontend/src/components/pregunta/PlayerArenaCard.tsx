@@ -1,15 +1,28 @@
+import { frameClasses, getItem } from '../../lib/catalog/items';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../lib/constants/categories';
 import { TALLY_TO_EARN_CROWN } from '../../lib/game/rules';
 import { WHEEL_CATEGORIES } from '../../lib/game/spin';
-import type { Player } from '../../lib/game/types';
+import type { GameMode, Player } from '../../lib/game/types';
 
 interface PlayerArenaCardProps {
   player: Player;
   active: boolean;
+  /** Crowns are only meaningful in coronas mode; other modes show answer stats. */
+  mode?: GameMode;
 }
 
-export default function PlayerArenaCard({ player, active }: PlayerArenaCardProps) {
+export default function PlayerArenaCard({
+  player,
+  active,
+  mode = 'coronas',
+}: PlayerArenaCardProps) {
   const label = player.id === 0 ? 'Jugador 1' : 'Jugador 2';
+  const equippedTitle = player.cosmetics?.title ? getItem(player.cosmetics.title) : undefined;
+  const avatarBorder = player.cosmetics?.frame
+    ? frameClasses(player.cosmetics.frame)
+    : active
+      ? 'border-lime-primary'
+      : 'border-plum';
 
   return (
     <div
@@ -49,9 +62,7 @@ export default function PlayerArenaCard({ player, active }: PlayerArenaCardProps
 
       <div className="flex flex-col items-center py-4">
         <div
-          className={`mb-3 flex h-20 w-20 items-center justify-center rounded-2xl border-2 bg-obsidian sm:h-24 sm:w-24 ${
-            active ? 'border-lime-primary' : 'border-plum'
-          }`}
+          className={`mb-3 flex h-20 w-20 items-center justify-center rounded-2xl border-2 bg-obsidian sm:h-24 sm:w-24 ${avatarBorder}`}
         >
           <span
             aria-hidden="true"
@@ -66,6 +77,18 @@ export default function PlayerArenaCard({ player, active }: PlayerArenaCardProps
         <h2 className="font-display text-sm font-bold tracking-wide text-light-text sm:text-base">
           {player.name}
         </h2>
+
+        {equippedTitle && (
+          <span
+            data-testid={`arena-title-${player.id}`}
+            className="mt-1 inline-flex items-center gap-1 rounded-full border border-plum bg-[#1a1120] px-2 py-0.5 font-display text-[9px] font-semibold uppercase tracking-wider text-lime-pastel"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[11px]">
+              local_offer
+            </span>
+            {equippedTitle.name}
+          </span>
+        )}
 
         <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-[#2e2038] bg-[#100c14] px-3 py-1">
           <span
@@ -85,30 +108,48 @@ export default function PlayerArenaCard({ player, active }: PlayerArenaCardProps
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#7a7280]">
-          Coronas
-        </span>
-        <div className="flex items-center gap-1.5">
-          {WHEEL_CATEGORIES.map((category) => {
-            const held = player.crowns.includes(category);
-            return (
-              <span
-                key={category}
-                data-testid={`crown-${player.id}-${category}`}
-                aria-label={`${CATEGORY_LABELS[category]}: ${held ? 'conseguida' : 'pendiente'}`}
-                title={CATEGORY_LABELS[category]}
-                className={`h-3.5 w-3.5 rounded-full border ${held ? 'border-white/40' : 'border-white/10'}`}
-                style={{ backgroundColor: held ? CATEGORY_COLORS[category] : 'transparent' }}
-              />
-            );
-          })}
-        </div>
-        <span className="text-[10px] text-[#7a7280]">
-          Racha de corona:{' '}
-          <span className="font-mono text-lime-pastel">
-            {player.crownTally}/{TALLY_TO_EARN_CROWN}
-          </span>
-        </span>
+        {mode === 'coronas' ? (
+          <>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#7a7280]">
+              Coronas
+            </span>
+            <div className="flex items-center gap-1.5">
+              {WHEEL_CATEGORIES.map((category) => {
+                const held = player.crowns.includes(category);
+                return (
+                  <span
+                    key={category}
+                    data-testid={`crown-${player.id}-${category}`}
+                    aria-label={`${CATEGORY_LABELS[category]}: ${held ? 'conseguida' : 'pendiente'}`}
+                    title={CATEGORY_LABELS[category]}
+                    className={`h-3.5 w-3.5 rounded-full border ${held ? 'border-white/40' : 'border-white/10'}`}
+                    style={{ backgroundColor: held ? CATEGORY_COLORS[category] : 'transparent' }}
+                  />
+                );
+              })}
+            </div>
+            <span className="text-[10px] text-[#7a7280]">
+              Racha de corona:{' '}
+              <span className="font-mono text-lime-pastel">
+                {player.crownTally}/{TALLY_TO_EARN_CROWN}
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#7a7280]">
+              {mode === 'duelo' ? 'Duelo' : mode === 'contrarreloj' ? 'Contrarreloj' : 'Ronda'}
+            </span>
+            <span className="text-[10px] text-[#a09aa7]">
+              Aciertos: <span className="font-mono text-lime-pastel">{player.correctAnswers}</span>
+              <span className="px-1">·</span>
+              Racha:{' '}
+              <span className="font-mono text-lime-pastel">
+                {player.streak}/{player.bestStreak}
+              </span>
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

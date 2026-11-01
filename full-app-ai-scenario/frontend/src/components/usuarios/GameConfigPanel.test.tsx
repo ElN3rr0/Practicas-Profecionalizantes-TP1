@@ -68,6 +68,34 @@ describe('GameConfigPanel', () => {
     );
   });
 
+  it('selects the Duelo Definitivo and Contrarreloj modes', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duelo Definitivo' }));
+    expect(readConfig().mode).toBe('duelo');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Contrarreloj' }));
+    expect(readConfig().mode).toBe('contrarreloj');
+    expect(screen.getByRole('button', { name: 'Contrarreloj' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('toggles the best-of-three tournament', () => {
+    renderPanel();
+
+    const toggle = screen.getByRole('button', { name: 'Torneo · al mejor de 3' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(toggle);
+    expect(readConfig().tournament).toBe(true);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(toggle);
+    expect(readConfig().tournament).toBe(false);
+  });
+
   it('selects the 30s timer exclusively', () => {
     renderPanel();
 

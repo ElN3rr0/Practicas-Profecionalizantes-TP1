@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App, { AppRoutes } from './App';
 import { GameProvider } from './lib/game/GameProvider';
+import { ProfilesProvider } from './lib/profiles/ProfilesProvider';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,11 +11,13 @@ afterEach(() => {
 
 function renderRoute(initialPath: string) {
   return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </GameProvider>,
+    <ProfilesProvider>
+      <GameProvider>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </GameProvider>
+    </ProfilesProvider>,
   );
 }
 

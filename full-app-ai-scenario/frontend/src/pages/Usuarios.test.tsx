@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { playSound } from '../lib/audio';
 import { GameProvider, useGame } from '../lib/game/GameProvider';
+import { ProfilesProvider } from '../lib/profiles/ProfilesProvider';
 import type { GameState } from '../lib/game/types';
 import Usuarios from './Usuarios';
 import Ruleta from './Ruleta';
@@ -35,16 +36,18 @@ function LocationProbe() {
 function renderUsuarios() {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
   render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/usuarios']}>
-        <StateProbe />
-        <LocationProbe />
-        <Routes>
-          <Route path="/usuarios" element={<Usuarios />} />
-          <Route path="/ruleta" element={<Ruleta />} />
-        </Routes>
-      </MemoryRouter>
-    </GameProvider>,
+    <ProfilesProvider>
+      <GameProvider>
+        <MemoryRouter initialEntries={['/usuarios']}>
+          <StateProbe />
+          <LocationProbe />
+          <Routes>
+            <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/ruleta" element={<Ruleta />} />
+          </Routes>
+        </MemoryRouter>
+      </GameProvider>
+    </ProfilesProvider>,
   );
 }
 

@@ -7,7 +7,6 @@ import Feedback from '../components/pregunta/Feedback';
 import PlayerArenaCard from '../components/pregunta/PlayerArenaCard';
 import PowerupBar from '../components/pregunta/PowerupBar';
 import TimerBar from '../components/pregunta/TimerBar';
-import UltraCategoryPicker from '../components/pregunta/UltraCategoryPicker';
 import { getQuestionsByCategory } from '../lib/api/client';
 import { playSound } from '../lib/audio';
 import type { SoundCue } from '../lib/audio/types';
@@ -36,13 +35,19 @@ interface PendingFeedback {
 }
 
 /** The congratulation / explanation line shown in the result box. */
-function feedbackDetail(pending: PendingFeedback): string {
-  if (pending.kind === 'timeout') return 'No respondiste a tiempo.';
+function feedbackDetail(pending: PendingFeedback, mode: GameMode): string {
+  if (pending.kind === 'timeout') {
+    return mode === 'duelo'
+      ? 'No respondiste a tiempo. El turno pasa al rival.'
+      : 'No respondiste a tiempo.';
+  }
   if (!pending.isCorrect) {
+    if (mode === 'duelo') return 'Fallaste. El turno pasa al rival.';
     return pending.isUltra
       ? 'Fallaste el ultra desafío: se reinició tu racha de aciertos.'
       : 'No sumaste puntos esta vez.';
   }
+  if (mode === 'duelo') return '¡Primer acierto! Te llevás el duelo definitivo.';
   if (pending.outcome === 'crown-pick') {
     return '¡Completaste 3 aciertos! Elegí la corona que querés sumar.';
   }
@@ -58,6 +63,8 @@ function feedbackDetail(pending: PendingFeedback): string {
  * in sudden death, which has no fixed denominator to show.
  */
 function roundBadgeLabel(round: number, mode: GameMode): string {
+  if (mode === 'duelo') return 'Duelo Definitivo';
+  if (mode === 'contrarreloj') return 'Contrarreloj';
   if (mode !== 'rondas') return `Ronda ${round}`;
   return round > ROUNDS_PER_GAME
     ? `Muerte súbita • Ronda ${round}`
@@ -99,7 +106,6 @@ export default function Pregunta() {
   const [notice, setNotice] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number>(state.config.timePerTurn);
   const [timerTotal, setTimerTotal] = useState<number>(state.config.timePerTurn);
-  const [showUltraPicker, setShowUltraPicker] = useState(false);
   const [cursors, setCursors] = useState<Partial<Record<CategoryName, number>>>({});
   const [reload, setReload] = useState(0);
   const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
@@ -186,29 +192,9 @@ export default function Pregunta() {
   );
 
   /**
-   * An ultra desafío is an extra question inside the turn: resolving it never passes
-   * the turn, so a win or a loss reloads the player's own question instead of leaving.
+   * An ultra desafío is resolved like a normal answer now: it closes the question and the
+   * turn passes, so the deferred outcome is applied the same way as any other answer.
    */
-  const applyUltraOutcome = useCallback(
-    (outcome: AnswerOutcome) => {
-      switch (outcome) {
-        case 'retry':
-          prepareRetry();
-          return;
-        case 'ended':
-          navigate('/resultados');
-          return;
-        case 'continue':
-          setReload((value) => value + 1);
-          resolvedRef.current = true;
-          return;
-        default:
-          resolvedRef.current = false;
-      }
-    },
-    [navigate, prepareRetry],
-  );
-
   const resolveTimeout = useCallback(() => {
     if (resolvedRef.current) return;
     resolvedRef.current = true;
@@ -237,11 +223,7 @@ export default function Pregunta() {
   }, [question, state.ultraChallenge, answerQuestion, resolveUltra]);
 
   const paused =
-    load !== 'ready' ||
-    resolvedRef.current ||
-    state.awaitingCrown ||
-    showUltraPicker ||
-    pendingFeedback !== null;
+    load !== 'ready' || resolvedRef.current || state.awaitingCrown || pendingFeedback !== null;
 
   useEffect(() => {
     if (paused) return;
@@ -290,11 +272,10 @@ export default function Pregunta() {
   /** Applies the deferred outcome once the player dismisses the result box. */
   const handleContinue = useCallback(() => {
     if (pendingFeedback === null) return;
-    const { outcome, isUltra } = pendingFeedback;
+    const { outcome } = pendingFeedback;
     setPendingFeedback(null);
-    if (isUltra) applyUltraOutcome(outcome);
-    else applyOutcome(outcome);
-  }, [pendingFeedback, applyOutcome, applyUltraOutcome]);
+    applyOutcome(outcome);
+  }, [pendingFeedback, applyOutcome]);
 
   const handleSelect = useCallback(
     (index: number) => {
@@ -340,9 +321,12 @@ export default function Pregunta() {
     [pickCrown, applyOutcome],
   );
 
+  /**
+   * Starts the ultra desafío unlocked at the 3-win streak. It is picked from the crown
+   * modal, so the player is trading the guaranteed crown for a riskier challenge.
+   */
   const handleStartUltra = useCallback(
     (picked: CategoryName) => {
-      setShowUltraPicker(false);
       if (!startUltraChallenge(picked)) return;
       resolvedRef.current = true;
       setReload((value) => value + 1);
@@ -354,8 +338,6 @@ export default function Pregunta() {
   const roundLabel = roundBadgeLabel(state.round, state.config.mode);
 
   const ultraActive = ultraCategory !== null;
-  const canStartUltra =
-    !ultraActive && !state.ultraUsed && !state.awaitingCrown && load === 'ready';
   const locked = load !== 'ready' || state.awaitingCrown;
 
   return (
@@ -378,7 +360,11 @@ export default function Pregunta() {
 
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
         <div className="order-2 lg:order-none lg:col-span-3">
-          <PlayerArenaCard player={state.players[0]} active={state.currentTurn === 0} />
+          <PlayerArenaCard
+            player={state.players[0]}
+            active={state.currentTurn === 0}
+            mode={state.config.mode}
+          />
         </div>
 
         <div className="order-1 lg:order-none lg:col-span-6">
@@ -403,9 +389,21 @@ export default function Pregunta() {
               )}
               <div className="inline-flex items-center gap-1.5 rounded-xl border border-[#ffb703]/40 bg-[#24132c] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-[#ffb703]">
                 <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
-                  emoji_events
+                  {state.config.mode === 'coronas'
+                    ? 'emoji_events'
+                    : state.config.mode === 'rondas'
+                      ? 'military_tech'
+                      : state.config.mode === 'duelo'
+                        ? 'sports_martial_arts'
+                        : 'timer'}
                 </span>
-                Corona en Juego
+                {state.config.mode === 'coronas'
+                  ? 'Corona en Juego'
+                  : state.config.mode === 'rondas'
+                    ? 'Ronda en Juego'
+                    : state.config.mode === 'duelo'
+                      ? 'Primer Acierto Gana'
+                      : '¡Sumá Puntos!'}
               </div>
             </div>
 
@@ -478,18 +476,6 @@ export default function Pregunta() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
                       type="button"
-                      disabled={!canStartUltra}
-                      onClick={() => setShowUltraPicker(true)}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-[#ffb703]/50 px-4 py-3 font-display text-[11px] font-bold uppercase tracking-wider text-[#ffb703] transition-all hover:bg-[#ffb703]/10 disabled:cursor-not-allowed disabled:border-[#333333] disabled:text-[#5c5c5c]"
-                    >
-                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
-                        local_fire_department
-                      </span>
-                      Ultra Desafío
-                    </button>
-
-                    <button
-                      type="button"
                       data-testid="confirm-answer"
                       disabled={selected === null || load !== 'ready' || state.awaitingCrown}
                       onClick={handleConfirm}
@@ -536,17 +522,19 @@ export default function Pregunta() {
         </div>
 
         <div className="order-3 lg:order-none lg:col-span-3">
-          <PlayerArenaCard player={state.players[1]} active={state.currentTurn === 1} />
+          <PlayerArenaCard
+            player={state.players[1]}
+            active={state.currentTurn === 1}
+            mode={state.config.mode}
+          />
         </div>
       </div>
 
-      {state.awaitingCrown && <CrownPicker crowns={player.crowns} onPick={handlePickCrown} />}
-
-      {showUltraPicker && (
-        <UltraCategoryPicker
+      {state.awaitingCrown && (
+        <CrownPicker
           crowns={player.crowns}
-          onPick={handleStartUltra}
-          onCancel={() => setShowUltraPicker(false)}
+          onPick={handlePickCrown}
+          onStartUltra={handleStartUltra}
         />
       )}
 
@@ -554,7 +542,7 @@ export default function Pregunta() {
         <AnswerFeedback
           kind={pendingFeedback.kind}
           correctAnswer={pendingFeedback.correctAnswer}
-          detail={feedbackDetail(pendingFeedback)}
+          detail={feedbackDetail(pendingFeedback, state.config.mode)}
           continueLabel={pendingFeedback.outcome === 'ended' ? 'Ver resultados' : 'Continuar'}
           onContinue={handleContinue}
         />

@@ -1,3 +1,4 @@
+import { frameClasses, getItem } from '../../lib/catalog/items';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../lib/constants/categories';
 import { modeAchievement } from '../../lib/game/results';
 import { ROUNDS_PER_GAME } from '../../lib/game/rules';
@@ -19,6 +20,12 @@ export default function PlayerResultCard({
   isWinner,
 }: PlayerResultCardProps) {
   const label = player.id === 0 ? 'Jugador 1' : 'Jugador 2';
+  const equippedTitle = player.cosmetics?.title ? getItem(player.cosmetics.title) : undefined;
+  const avatarBorder = player.cosmetics?.frame
+    ? frameClasses(player.cosmetics.frame)
+    : isWinner
+      ? 'border-lime-primary'
+      : 'border-plum';
 
   return (
     <div
@@ -51,9 +58,7 @@ export default function PlayerResultCard({
 
       <div className="flex items-center gap-3 py-4">
         <div
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 bg-obsidian ${
-            isWinner ? 'border-lime-primary' : 'border-plum'
-          }`}
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 bg-obsidian ${avatarBorder}`}
         >
           <span
             aria-hidden="true"
@@ -72,6 +77,11 @@ export default function PlayerResultCard({
           <p className="text-[11px] uppercase tracking-wider text-[#7a7280]">
             {modeAchievement(player, mode, roundsWon)}
           </p>
+          {equippedTitle && (
+            <p className="mt-0.5 truncate text-[10px] uppercase tracking-wider text-lime-pastel">
+              {equippedTitle.name}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 rounded-xl border border-[#2e2038] bg-[#100c14] px-3 py-1">
@@ -93,7 +103,7 @@ export default function PlayerResultCard({
 
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#7a7280]">
-          {mode === 'coronas' ? 'Coronas' : 'Rondas ganadas'}
+          {mode === 'coronas' ? 'Coronas' : mode === 'rondas' ? 'Rondas ganadas' : 'Aciertos'}
         </span>
         {mode === 'coronas' ? (
           <div className="flex items-center gap-1.5">
@@ -113,7 +123,7 @@ export default function PlayerResultCard({
               );
             })}
           </div>
-        ) : (
+        ) : mode === 'rondas' ? (
           <div aria-hidden="true" className="flex items-center gap-1">
             {Array.from({ length: ROUNDS_PER_GAME }, (_, index) => (
               <span
@@ -124,6 +134,14 @@ export default function PlayerResultCard({
               />
             ))}
           </div>
+        ) : (
+          <p className="text-[11px] text-[#a09aa7]">
+            <span data-testid={`result-correct-${player.id}`}>
+              {player.correctAnswers} correctas
+            </span>
+            <span className="px-1">·</span>
+            <span>{player.incorrectAnswers} incorrectas</span>
+          </p>
         )}
       </div>
     </div>

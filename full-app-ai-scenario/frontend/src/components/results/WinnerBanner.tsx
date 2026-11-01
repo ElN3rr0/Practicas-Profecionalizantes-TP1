@@ -1,3 +1,5 @@
+import Confetti from '../effects/Confetti';
+import { frameClasses, getItem } from '../../lib/catalog/items';
 import { MODE_LABELS, modeAchievement } from '../../lib/game/results';
 import type { GameMode, Player } from '../../lib/game/types';
 
@@ -7,6 +9,13 @@ interface WinnerBannerProps {
   mode: GameMode;
   roundWins: readonly [number, number];
 }
+
+const MODE_ICONS: Record<GameMode, string> = {
+  coronas: 'workspace_premium',
+  rondas: 'military_tech',
+  duelo: 'sports_martial_arts',
+  contrarreloj: 'timer',
+};
 
 export default function WinnerBanner({ player, mode, roundWins }: WinnerBannerProps) {
   if (player === null) {
@@ -35,11 +44,14 @@ export default function WinnerBanner({ player, mode, roundWins }: WinnerBannerPr
     );
   }
 
+  const equippedTitle = player.cosmetics?.title ? getItem(player.cosmetics.title) : undefined;
+
   return (
     <div
       data-testid="winner-banner"
       className="relative overflow-hidden rounded-2xl border border-lime-primary/40 bg-surface-card px-6 py-8 text-center sm:px-10 sm:py-10"
     >
+      <Confetti />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-48 rounded-full bg-lime-primary/15 blur-3xl"
@@ -57,7 +69,11 @@ export default function WinnerBanner({ player, mode, roundWins }: WinnerBannerPr
           Fin de la partida • {MODE_LABELS[mode]}
         </span>
 
-        <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-lime-primary bg-obsidian shadow-[0_0_35px_rgba(176,242,128,0.35)] sm:h-24 sm:w-24">
+        <div
+          className={`victory-glow flex h-20 w-20 items-center justify-center rounded-2xl border-2 bg-obsidian sm:h-24 sm:w-24 ${
+            player.cosmetics?.frame ? frameClasses(player.cosmetics.frame) : 'border-lime-primary'
+          }`}
+        >
           <span
             aria-hidden="true"
             className="material-symbols-outlined text-[40px] text-lime-primary sm:text-[46px]"
@@ -73,10 +89,22 @@ export default function WinnerBanner({ player, mode, roundWins }: WinnerBannerPr
           ¡Gana {player.name}!
         </h1>
 
+        {equippedTitle !== undefined && (
+          <span
+            data-testid="winner-title"
+            className="inline-flex items-center gap-1 rounded-full border border-plum bg-[#1a1120] px-3 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-lime-pastel"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[12px]">
+              local_offer
+            </span>
+            {equippedTitle.name}
+          </span>
+        )}
+
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full border border-plum bg-plum/40 px-3 py-1 font-display text-[11px] font-bold uppercase tracking-wider text-lime-pastel">
             <span aria-hidden="true" className="material-symbols-outlined text-[15px]">
-              {mode === 'coronas' ? 'workspace_premium' : 'military_tech'}
+              {MODE_ICONS[mode]}
             </span>
             {modeAchievement(player, mode, roundWins[player.id])}
           </span>

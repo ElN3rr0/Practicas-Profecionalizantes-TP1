@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '../../lib/constants/categories';
 import { WHEEL_CATEGORIES } from '../../lib/game/spin';
 import type { CategoryName } from '../../lib/game/types';
@@ -5,14 +6,23 @@ import type { CategoryName } from '../../lib/game/types';
 interface CrownPickerProps {
   crowns: readonly CategoryName[];
   onPick: (category: CategoryName) => void;
+  /** Starts an ultra desafío for the chosen category (the risky alternative to a crown). */
+  onStartUltra: (category: CategoryName) => void;
 }
 
-export default function CrownPicker({ crowns, onPick }: CrownPickerProps) {
+export default function CrownPicker({ crowns, onPick, onStartUltra }: CrownPickerProps) {
+  const [risking, setRisking] = useState(false);
+
+  const choose = (category: CategoryName) => {
+    if (risking) onStartUltra(category);
+    else onPick(category);
+  };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Elegí tu corona"
+      aria-label={risking ? 'Ultra desafío' : 'Elegí tu corona'}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
     >
       <div className="w-full max-w-lg rounded-3xl border-2 border-lime-primary bg-[#15111b] p-6 text-center shadow-[0_0_50px_rgba(176,242,128,0.3)]">
@@ -20,13 +30,15 @@ export default function CrownPicker({ crowns, onPick }: CrownPickerProps) {
           aria-hidden="true"
           className="material-symbols-outlined text-[40px] text-lime-primary"
         >
-          workspace_premium
+          {risking ? 'local_fire_department' : 'workspace_premium'}
         </span>
         <h2 className="mt-1 font-display text-2xl font-extrabold uppercase text-light-text">
-          ¡Corona ganada!
+          {risking ? 'Ultra Desafío' : '¡Corona ganada!'}
         </h2>
         <p className="mt-2 text-xs text-[#a09aa7]">
-          Tres respuestas correctas. Elegí la categoría que querés sumar a tu corona.
+          {risking
+            ? 'Elegí la categoría del ultra. Si acertás ganás esa corona; si fallás, perdés tu racha de 3.'
+            : 'Tres respuestas correctas. Elegí la categoría que querés sumar a tu corona.'}
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -38,7 +50,7 @@ export default function CrownPicker({ crowns, onPick }: CrownPickerProps) {
                 type="button"
                 data-testid={`crown-option-${category}`}
                 disabled={held}
-                onClick={() => onPick(category)}
+                onClick={() => choose(category)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all ${
                   held
                     ? 'cursor-not-allowed border-[#262626] bg-[#141414] opacity-40'
@@ -66,6 +78,19 @@ export default function CrownPicker({ crowns, onPick }: CrownPickerProps) {
             );
           })}
         </div>
+
+        <button
+          type="button"
+          data-testid="toggle-ultra"
+          onClick={() => setRisking((value) => !value)}
+          className={`mt-5 w-full rounded-xl border px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wider transition-all ${
+            risking
+              ? 'border-[#ffb703]/60 bg-[#ffb703]/10 text-[#ffb703]'
+              : 'border-[#ffb703]/40 text-[#ffb703] hover:bg-[#ffb703]/10'
+          }`}
+        >
+          {risking ? 'Volver a elegir corona' : 'Arriesgar: Ultra Desafío'}
+        </button>
       </div>
     </div>
   );

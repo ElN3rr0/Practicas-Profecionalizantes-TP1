@@ -7,7 +7,7 @@ import type { Question } from '../lib/api/types';
 import { playSound } from '../lib/audio';
 import { GameProvider, useGame } from '../lib/game/GameProvider';
 import type { GameContextValue } from '../lib/game/GameProvider';
-import type { GameConfig, GameState } from '../lib/game/types';
+import type { CategoryName, GameConfig, GameState } from '../lib/game/types';
 import { readyGame } from '../test/gameState';
 import Pregunta from './Pregunta';
 
@@ -114,6 +114,19 @@ function seedFiveCrowns() {
     game.answerQuestion(false);
     game.answerQuestion(true);
     game.answerQuestion(false);
+  };
+}
+
+/** Player 0 is at the 3-win moment: a crown is owed, which also unlocks the ultra. */
+function crownMoment(
+  config: Partial<Omit<GameConfig, 'language'>> = {},
+  crowns: CategoryName[] = [],
+): GameState {
+  const base = readyGame({ language: 'es', ...config });
+  return {
+    ...base,
+    awaitingCrown: true,
+    players: [{ ...base.players[0], crownTally: 3, crowns: [...crowns] }, base.players[1]],
   };
 }
 
@@ -454,17 +467,16 @@ describe('Pregunta', () => {
     expect(screen.getByTestId('powerup-hint')).toBeDisabled();
   });
 
-  it('ultra desafío fetches the chosen category and grants its crown on a win', async () => {
+  it('starts the ultra from the 3-win moment and grants the crown on a win', async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     const fetchMock = stubQuestions();
 
-    renderPage();
+    renderPage(() => {}, crownMoment());
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    const dialog = screen.getByRole('dialog', { name: 'Ultra desafío' });
-    fireEvent.click(within(dialog).getByTestId('ultra-option-ciencia'));
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -476,38 +488,39 @@ describe('Pregunta', () => {
     fireEvent.click(confirmButton());
     await flush();
 
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('¡Correcto!');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
     const state = readState();
     expect(state.players[0].crowns).toEqual(['ciencia']);
     expect(state.ultraChallenge).toBeNull();
-    expect(state.currentTurn).toBe(0);
-    expect(pathname()).toBe('/pregunta');
+    expect(state.currentTurn).toBe(1);
+    expect(pathname()).toBe('/ruleta');
   });
 
-  it('a timeout on an ultra desafío clears it without passing the turn', async () => {
+  it('a timeout on an ultra desafío resets the tally and passes the turn', async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage();
+    renderPage(() => {}, crownMoment());
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     advanceSeconds(20);
     await flush();
 
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('Se acabó el tiempo');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
     const state = readState();
     expect(state.ultraChallenge).toBeNull();
-    expect(state.currentTurn).toBe(0);
+    expect(state.currentTurn).toBe(1);
     expect(state.players[0].crowns).toEqual([]);
-    expect(pathname()).toBe('/pregunta');
-    expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién pintó la Gioconda?');
+    expect(pathname()).toBe('/ruleta');
   });
 
   it('an ultra win on the last missing crown ends the game', async () => {
@@ -515,15 +528,14 @@ describe('Pregunta', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage(seedFiveCrowns());
+    renderPage(
+      () => {},
+      crownMoment({}, ['arte', 'historia', 'deportes', 'entretenimiento', 'geografia']),
+    );
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     fireEvent.click(option(0));
@@ -544,31 +556,11 @@ describe('Pregunta', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage((game) => {
-      game.setConfig({
-        mode: 'coronas',
-        timePerTurn: 20,
-        powerups: ['second-chance'],
-        language: 'es',
-      });
-      game.startGame();
-      game.land('arte');
-      const answerWrong = () => {
-        if (game.answerQuestion(false) === 'retry') game.answerQuestion(false);
-      };
-      game.answerQuestion(true);
-      answerWrong();
-      game.answerQuestion(true);
-      answerWrong();
-    });
+    renderPage(() => {}, crownMoment({ powerups: ['second-chance'] }));
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     fireEvent.click(option(1));
@@ -578,18 +570,21 @@ describe('Pregunta', () => {
     expect(readState().ultraChallenge).toBe('ciencia');
     expect(readState().currentTurn).toBe(0);
     expect(readState().players[0].powerups['second-chance']).toBe(0);
-    expect(readState().players[0].crownTally).toBe(2);
+    expect(readState().players[0].crownTally).toBe(3);
 
     fireEvent.click(option(2));
     fireEvent.click(confirmButton());
     await flush();
 
+    expect(screen.getByTestId('answer-feedback')).toHaveTextContent('Incorrecto');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
     const state = readState();
     expect(state.ultraChallenge).toBeNull();
     expect(state.players[0].crownTally).toBe(0);
     expect(state.players[0].crowns).toEqual([]);
-    expect(state.currentTurn).toBe(0);
-    expect(pathname()).toBe('/pregunta');
+    expect(state.currentTurn).toBe(1);
+    expect(pathname()).toBe('/ruleta');
   });
 
   it('makes the crown holder choose an unheld category before the turn continues', async () => {
@@ -729,15 +724,11 @@ describe('Pregunta', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage();
+    renderPage(() => {}, crownMoment());
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
     expect(playMock.mock.calls).toEqual([['ultra']]);
 
@@ -754,15 +745,11 @@ describe('Pregunta', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage();
+    renderPage(() => {}, crownMoment());
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     fireEvent.click(option(1));
@@ -778,15 +765,11 @@ describe('Pregunta', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
     stubQuestions();
 
-    renderPage();
+    renderPage(() => {}, crownMoment());
     await flush();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ultra Desafío/ }));
-    fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Ultra desafío' })).getByTestId(
-        'ultra-option-ciencia',
-      ),
-    );
+    fireEvent.click(screen.getByTestId('toggle-ultra'));
+    fireEvent.click(screen.getByTestId('crown-option-ciencia'));
     await flush();
 
     advanceSeconds(20);

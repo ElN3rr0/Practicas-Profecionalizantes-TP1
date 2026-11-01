@@ -45,4 +45,31 @@ describe('PlayerArenaCard', () => {
       'Ciencia: conseguida',
     );
   });
+
+  it('renders the equipped frame and title', () => {
+    render(
+      <PlayerArenaCard
+        player={player({ cosmetics: { frame: 'frame_gold', title: 'title_novato' } })}
+        active
+      />,
+    );
+
+    expect(screen.getByTestId('arena-title-0')).toHaveTextContent('Novato');
+    expect(screen.getByText('account_circle').closest('div')).toHaveClass('border-[#F5C542]');
+  });
+
+  it('shows answer stats instead of crowns outside coronas mode', () => {
+    render(
+      <PlayerArenaCard
+        player={player({ correctAnswers: 4, streak: 2, bestStreak: 3 })}
+        active
+        mode="contrarreloj"
+      />,
+    );
+
+    expect(screen.getByText('Contrarreloj')).toBeInTheDocument();
+    expect(screen.queryByText('Coronas')).not.toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('2/3')).toBeInTheDocument();
+  });
 });

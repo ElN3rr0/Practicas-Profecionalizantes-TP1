@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import App, { AppRoutes } from './App';
 import { setMuted, unlockAudio } from './lib/audio';
 import { GameProvider } from './lib/game/GameProvider';
+import { ProfilesProvider } from './lib/profiles/ProfilesProvider';
 import { WHEEL_CATEGORIES } from './lib/game/spin';
 import { finishedGame } from './test/gameState';
 import { drainUnlockListeners, installFakeAudio } from './test/fakeAudio';
@@ -18,11 +19,13 @@ const EVERY_CROWN = [...WHEEL_CATEGORIES];
 
 function renderResults() {
   return render(
-    <GameProvider initialState={finishedGame({ crowns: [EVERY_CROWN, []], winner: 0 })}>
-      <MemoryRouter initialEntries={['/resultados']}>
-        <AppRoutes />
-      </MemoryRouter>
-    </GameProvider>,
+    <ProfilesProvider>
+      <GameProvider initialState={finishedGame({ crowns: [EVERY_CROWN, []], winner: 0 })}>
+        <MemoryRouter initialEntries={['/resultados']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </GameProvider>
+    </ProfilesProvider>,
   );
 }
 

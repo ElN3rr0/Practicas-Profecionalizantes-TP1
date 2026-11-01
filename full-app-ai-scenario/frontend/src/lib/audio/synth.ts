@@ -58,6 +58,8 @@ export const CUE_NOTES: Record<SoundCue, readonly Note[]> = {
   ultra: [glide('sawtooth', 0.8, 0.25, 110, 220), glide('sawtooth', 0.8, 0.25, 220, 110, 0.25)],
   victory: sequence('triangle', 0.7, 0.14, [523, 659, 784, 1047]),
   defeat: sequence('triangle', 0.5, 0.18, [392, 330, 262]),
+  'level-up': sequence('sine', 0.7, 0.1, [659, 784, 988, 1319]),
+  achievement: sequence('triangle', 0.6, 0.08, [880, 1109, 1319]),
 };
 
 let audio: AudioNodes | null = null;

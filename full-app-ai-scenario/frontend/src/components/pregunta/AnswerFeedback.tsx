@@ -61,7 +61,9 @@ export default function AnswerFeedback({
     >
       <div
         data-testid="answer-feedback"
-        className={`w-full max-w-md rounded-3xl border-2 bg-[#15111b] p-7 text-center ${tone.border} ${tone.glow}`}
+        className={`w-full max-w-md rounded-3xl border-2 bg-[#15111b] p-7 text-center ${tone.border} ${tone.glow} ${
+          kind === 'incorrect' ? 'feedback-shake' : 'feedback-pop'
+        }`}
       >
         <span
           aria-hidden="true"

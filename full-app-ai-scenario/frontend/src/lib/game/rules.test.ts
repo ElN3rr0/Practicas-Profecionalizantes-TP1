@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONTRARRELOJ_SECONDS,
+  DUEL_CORRECT_ANSWERS,
   EXTRA_SECONDS,
   POINTS_PER_CORRECT_ANSWER,
   ROUNDS_PER_GAME,
+  SERIES_TARGET_WINS,
   TALLY_TO_EARN_CROWN,
   crownWinner,
+  duelWinner,
   holdsEveryCrown,
   isGameOver,
   roundWinner,
+  seriesChampion,
   stateWinner,
+  timeWinner,
   withCrown,
 } from './rules';
 import type { CategoryName, GameState } from './types';
@@ -22,6 +28,9 @@ describe('rule constants', () => {
     expect(TALLY_TO_EARN_CROWN).toBe(3);
     expect(ROUNDS_PER_GAME).toBe(10);
     expect(EXTRA_SECONDS).toBe(15);
+    expect(CONTRARRELOJ_SECONDS).toBe(90);
+    expect(DUEL_CORRECT_ANSWERS).toBe(1);
+    expect(SERIES_TARGET_WINS).toBe(2);
   });
 });
 
@@ -59,10 +68,47 @@ describe('roundWinner', () => {
   });
 });
 
+describe('duelWinner', () => {
+  it('returns the first player with a correct answer', () => {
+    const state = patchPlayer(readyGame({ mode: 'duelo' }), 1, { correctAnswers: 1 });
+    expect(duelWinner(state.players)).toBe(1);
+    expect(duelWinner(readyGame().players)).toBeNull();
+  });
+});
+
+describe('timeWinner', () => {
+  it('returns the higher score and null on a tie', () => {
+    const base = readyGame({ mode: 'contrarreloj' });
+    expect(timeWinner(patchPlayer(base, 0, { score: 300 }).players)).toBe(0);
+    expect(timeWinner(patchPlayer(base, 1, { score: 300 }).players)).toBe(1);
+    expect(timeWinner(base.players)).toBeNull();
+  });
+});
+
+describe('seriesChampion', () => {
+  it('declares the first player to reach the target wins', () => {
+    expect(seriesChampion([0, 0])).toBeNull();
+    expect(seriesChampion([1, 1])).toBeNull();
+    expect(seriesChampion([2, 1])).toBe(0);
+    expect(seriesChampion([1, 2])).toBe(1);
+  });
+});
+
 describe('isGameOver', () => {
   it('is driven by the crowns in coronas mode', () => {
     expect(isGameOver(readyGame())).toBe(false);
     expect(isGameOver(patchPlayer(readyGame(), 0, { crowns: [...SIX] }))).toBe(true);
+  });
+
+  it('ends a duel as soon as someone answers correctly', () => {
+    const duel = readyGame({ mode: 'duelo' });
+    expect(isGameOver(duel)).toBe(false);
+    expect(isGameOver(patchPlayer(duel, 0, { correctAnswers: 1 }))).toBe(true);
+  });
+
+  it('ends a contrarreloj game exactly at zero', () => {
+    expect(isGameOver({ ...readyGame({ mode: 'contrarreloj' }), clock: 1 })).toBe(false);
+    expect(isGameOver({ ...readyGame({ mode: 'contrarreloj' }), clock: 0 })).toBe(true);
   });
 
   it('ends a rondas game only after the tenth round with a decided round count', () => {
@@ -83,6 +129,17 @@ describe('isGameOver', () => {
 describe('stateWinner', () => {
   it('names the crown holder in coronas mode', () => {
     expect(stateWinner(patchPlayer(readyGame(), 0, { crowns: [...SIX] }))).toBe(0);
+  });
+
+  it('names the first correct answer in duelo mode', () => {
+    expect(stateWinner(patchPlayer(readyGame({ mode: 'duelo' }), 1, { correctAnswers: 1 }))).toBe(
+      1,
+    );
+  });
+
+  it('names the score leader in contrarreloj mode', () => {
+    const state = patchPlayer(readyGame({ mode: 'contrarreloj' }), 0, { score: 200 });
+    expect(stateWinner(state)).toBe(0);
   });
 
   it('names the round-wins leader in rondas mode, or null on a tie', () => {

@@ -5,13 +5,16 @@ import {
   emptyPowerupInventory,
   gameReducer,
   GameProvider,
+  resolveAnswer,
   useGame,
 } from './GameProvider';
 import type { GameAction } from './GameProvider';
 import type { GameState } from './types';
+import { CONTRARRELOJ_SECONDS } from './rules';
+import { patchPlayer, readyGame } from '../../test/gameState';
 
 function start(state: GameState, currentTurn: 0 | 1 = 0): GameState {
-  return gameReducer(state, { type: 'game/start', currentTurn });
+  return gameReducer(state, { type: 'game/start', currentTurn, gameId: 'test-game' });
 }
 
 describe('createInitialState', () => {
@@ -192,7 +195,7 @@ function playedGame(): GameState {
   });
   state = gameReducer(state, { type: 'player/set', id: 0, name: 'Ana', avatar: 'smart_toy' });
   state = gameReducer(state, { type: 'player/set', id: 1, name: 'Luis', avatar: 'rocket_launch' });
-  state = gameReducer(state, { type: 'game/start', currentTurn: 1 });
+  state = gameReducer(state, { type: 'game/start', currentTurn: 1, gameId: 'test-game' });
   state = gameReducer(state, { type: 'game/land', category: 'historia' });
 
   return {
@@ -363,5 +366,134 @@ describe('GameProvider', () => {
     });
 
     expect(result.current.state).toEqual(seeded);
+  });
+});
+
+describe('gameReducer / Phase 3 modes', () => {
+  it('copies equipped cosmetics onto the player and clears them for a guest', () => {
+    const withCosmetics = gameReducer(createInitialState(), {
+      type: 'player/set',
+      id: 0,
+      name: 'Ana',
+      avatar: 'smart_toy',
+      profileId: 'p1',
+      cosmetics: { frame: 'frame_gold', title: 'title_novato' },
+    });
+    expect(withCosmetics.players[0].cosmetics).toEqual({
+      frame: 'frame_gold',
+      title: 'title_novato',
+    });
+
+    const guest = gameReducer(withCosmetics, {
+      type: 'player/set',
+      id: 0,
+      name: 'Ana',
+      avatar: 'smart_toy',
+      profileId: null,
+      cosmetics: null,
+    });
+    expect(guest.players[0].cosmetics).toBeUndefined();
+  });
+
+  it('ends a duel on the first correct answer and passes the turn on a miss', () => {
+    const duel = readyGame({ mode: 'duelo' });
+    const missed = resolveAnswer(duel, false, false);
+    expect(missed.value).toBe('continue');
+    expect(missed.state.currentTurn).toBe(1);
+
+    const won = resolveAnswer({ ...duel, currentTurn: 1 }, true);
+    expect(won.value).toBe('ended');
+    expect(won.state.status).toBe('ended');
+    expect(won.state.winner).toBe(1);
+  });
+
+  it('never asks for a crown in duelo mode', () => {
+    const charged = patchPlayer(readyGame({ mode: 'duelo' }), 0, { crownTally: 2 });
+    const step = resolveAnswer(charged, true);
+
+    expect(step.value).toBe('ended');
+    expect(step.state.awaitingCrown).toBe(false);
+  });
+
+  it('counts down the contrarreloj clock and ends on the score at zero', () => {
+    const game = patchPlayer(readyGame({ mode: 'contrarreloj' }), 0, { score: 300 });
+    const mid = gameReducer({ ...game, clock: 2 }, { type: 'game/tick' });
+    expect(mid.clock).toBe(1);
+    expect(mid.status).toBe('answering');
+
+    const ended = gameReducer(mid, { type: 'game/tick' });
+    expect(ended.clock).toBe(0);
+    expect(ended.status).toBe('ended');
+    expect(ended.winner).toBe(0);
+  });
+
+  it('ignores the clock outside contrarreloj', () => {
+    const game = { ...readyGame({ mode: 'coronas' }), clock: 5 };
+    expect(gameReducer(game, { type: 'game/tick' })).toEqual(game);
+  });
+
+  it('resets the clock when a new game starts', () => {
+    const game = { ...readyGame({ mode: 'contrarreloj' }), clock: 3 };
+    const restarted = gameReducer(game, {
+      type: 'game/start',
+      currentTurn: 0,
+      gameId: 'next',
+    });
+    expect(restarted.clock).toBe(CONTRARRELOJ_SECONDS);
+  });
+
+  it('feeds a best-of-three series and keeps it across games', () => {
+    const first = resolveAnswer(readyGame({ mode: 'duelo', tournament: true }), true);
+    expect(first.state.seriesWins).toEqual([1, 0]);
+
+    const next = gameReducer(first.state, {
+      type: 'game/start',
+      currentTurn: 0,
+      gameId: 'series-game-2',
+    });
+    expect(next.seriesWins).toEqual([1, 0]);
+
+    const reset = gameReducer(next, {
+      type: 'game/start',
+      currentTurn: 0,
+      gameId: 'series-game-3',
+      resetSeries: true,
+    });
+    expect(reset.seriesWins).toEqual([0, 0]);
+  });
+
+  it('does not feed a series unless the tournament toggle is on', () => {
+    const step = resolveAnswer(readyGame({ mode: 'duelo' }), true);
+    expect(step.state.seriesWins).toEqual([0, 0]);
+  });
+
+  it('resets the series when the mode or tournament flag changes', () => {
+    const base = createInitialState();
+    const inSeries: GameState = {
+      ...base,
+      config: { ...base.config, tournament: true },
+      seriesWins: [1, 0],
+    };
+
+    expect(
+      gameReducer(inSeries, {
+        type: 'config/set',
+        config: { ...inSeries.config, mode: 'duelo' },
+      }).seriesWins,
+    ).toEqual([0, 0]);
+
+    expect(
+      gameReducer(inSeries, {
+        type: 'config/set',
+        config: { ...inSeries.config, tournament: false },
+      }).seriesWins,
+    ).toEqual([0, 0]);
+
+    expect(
+      gameReducer(inSeries, {
+        type: 'config/set',
+        config: { ...inSeries.config, timePerTurn: 30 },
+      }).seriesWins,
+    ).toEqual([1, 0]);
   });
 });

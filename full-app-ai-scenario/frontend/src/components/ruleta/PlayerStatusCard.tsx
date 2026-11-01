@@ -1,3 +1,4 @@
+import { frameClasses, getItem } from '../../lib/catalog/items';
 import { useGame } from '../../lib/game/GameProvider';
 
 interface PlayerStatusCardProps {
@@ -9,6 +10,12 @@ export default function PlayerStatusCard({ id, active }: PlayerStatusCardProps) 
   const { state } = useGame();
   const player = state.players[id];
   const label = id === 0 ? 'Jugador 1' : 'Jugador 2';
+  const equippedTitle = player.cosmetics?.title ? getItem(player.cosmetics.title) : undefined;
+  const avatarBorder = player.cosmetics?.frame
+    ? frameClasses(player.cosmetics.frame)
+    : active
+      ? 'border-lime-primary'
+      : 'border-plum';
 
   return (
     <div
@@ -48,9 +55,7 @@ export default function PlayerStatusCard({ id, active }: PlayerStatusCardProps) 
 
       <div className="flex flex-col items-center py-4">
         <div
-          className={`mb-3 flex h-24 w-24 items-center justify-center rounded-2xl border-2 bg-obsidian sm:h-28 sm:w-28 ${
-            active ? 'border-lime-primary' : 'border-plum'
-          }`}
+          className={`mb-3 flex h-24 w-24 items-center justify-center rounded-2xl border-2 bg-obsidian sm:h-28 sm:w-28 ${avatarBorder}`}
         >
           <span
             aria-hidden="true"
@@ -65,6 +70,15 @@ export default function PlayerStatusCard({ id, active }: PlayerStatusCardProps) 
         <h2 className="font-display text-base font-bold tracking-wide text-light-text">
           {player.name}
         </h2>
+
+        {equippedTitle && (
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-plum bg-[#1a1120] px-2 py-0.5 font-display text-[9px] font-semibold uppercase tracking-wider text-lime-pastel">
+            <span aria-hidden="true" className="material-symbols-outlined text-[11px]">
+              local_offer
+            </span>
+            {equippedTitle.name}
+          </span>
+        )}
 
         <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-[#2e2038] bg-[#100c14] px-3 py-1">
           <span

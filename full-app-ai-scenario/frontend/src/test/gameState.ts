@@ -18,7 +18,7 @@ export function startedGame(config: Partial<GameConfig> = {}, currentTurn: 0 | 1
     type: 'config/set',
     config: { ...initial.config, ...config },
   });
-  return gameReducer(configured, { type: 'game/start', currentTurn });
+  return gameReducer(configured, { type: 'game/start', currentTurn, gameId: 'test-game' });
 }
 
 /** A started game already on the question screen for `category`. */
@@ -56,6 +56,8 @@ interface FinishedGamePatch {
   scores?: [number, number];
   crowns?: [CategoryName[], CategoryName[]];
   roundWins?: [number, number];
+  tournament?: boolean;
+  seriesWins?: [number, number];
 }
 
 /** A game whose result is already recorded, ready for the results screen. */
@@ -67,14 +69,17 @@ export function finishedGame({
   scores = [0, 0],
   crowns = [[], []],
   roundWins = [0, 0],
+  tournament = false,
+  seriesWins = [0, 0],
 }: FinishedGamePatch = {}): GameState {
   const base = createInitialState();
   const state: GameState = {
     ...base,
-    config: { ...base.config, mode },
+    config: { ...base.config, mode, tournament },
     status,
     winner,
     roundWins,
+    seriesWins,
   };
 
   const withPlayers = patchPlayer(state, 0, {

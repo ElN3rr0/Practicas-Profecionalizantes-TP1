@@ -117,3 +117,125 @@
     animation: none;
   }
 }
+
+@keyframes level-up-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.level-up-pop {
+  animation: level-up-pop 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-pop {
+    animation: none;
+  }
+}
+
+/* Victory celebration: decorative rain that never intercepts input. */
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(24px, 460px, 0) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* Answer feedback entrance: a small pop, and a shake when the answer was wrong. */
+@keyframes feedback-pop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes feedback-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.feedback-pop {
+  animation: feedback-pop 0.28s ease-out both;
+}
+
+.feedback-shake {
+  animation:
+    feedback-pop 0.2s ease-out both,
+    feedback-shake 0.4s ease-in-out 0.2s;
+}
+
+@keyframes victory-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 25px rgba(176, 242, 128, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 55px rgba(176, 242, 128, 0.7);
+  }
+}
+
+.victory-glow {
+  animation: victory-glow 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece,
+  .feedback-pop,
+  .feedback-shake,
+  .victory-glow {
+    animation: none;
+  }
+}

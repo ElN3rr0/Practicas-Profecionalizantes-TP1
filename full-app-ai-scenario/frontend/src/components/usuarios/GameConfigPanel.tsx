@@ -21,6 +21,8 @@ interface PowerupOption {
 const MODE_OPTIONS: readonly ModeOption[] = [
   { id: 'coronas', label: '6 Coronas', icon: 'workspace_premium' },
   { id: 'rondas', label: '10 Rondas', icon: 'military_tech' },
+  { id: 'duelo', label: 'Duelo Definitivo', icon: 'sports_martial_arts' },
+  { id: 'contrarreloj', label: 'Contrarreloj', icon: 'timer' },
 ];
 
 const TIME_OPTIONS: readonly TimeOption[] = [
@@ -125,6 +127,29 @@ export default function GameConfigPanel() {
             );
           })}
         </div>
+        <button
+          type="button"
+          aria-pressed={config.tournament === true}
+          onClick={() => setConfig({ ...config, tournament: config.tournament !== true })}
+          className={`mt-2 flex items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+            config.tournament === true
+              ? 'border-lime-primary/50 bg-plum text-lime-primary'
+              : 'border border-[#262626] bg-[#181818] text-[#888888] hover:text-light-text'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
+              emoji_events
+            </span>
+            Torneo · al mejor de 3
+          </span>
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 rounded-full ${
+              config.tournament === true ? 'bg-lime-primary' : 'bg-[#444444]'
+            }`}
+          />
+        </button>
       </section>
 
       <section className="flex flex-col justify-between rounded-xl border border-[#202020] bg-[#101010] p-4">

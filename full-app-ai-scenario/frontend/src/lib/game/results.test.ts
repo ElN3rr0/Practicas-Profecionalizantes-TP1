@@ -56,6 +56,40 @@ describe('resolveWinner / rondas', () => {
   });
 });
 
+describe('resolveWinner / duelo and contrarreloj', () => {
+  it('declares the first player with a correct answer in duelo', () => {
+    const base = finishedGame({ mode: 'duelo', winner: 1, status: 'ended' });
+    const state = {
+      ...base,
+      players: [base.players[0], { ...base.players[1], correctAnswers: 1 }] as typeof base.players,
+    };
+
+    expect(resolveWinner(state)).toBe(1);
+  });
+
+  it('declares the score leader in contrarreloj', () => {
+    const state = finishedGame({
+      mode: 'contrarreloj',
+      winner: 0,
+      status: 'ended',
+      scores: [400, 300],
+    });
+
+    expect(resolveWinner(state)).toBe(0);
+  });
+
+  it('declares no winner in contrarreloj on a tie', () => {
+    const state = finishedGame({
+      mode: 'contrarreloj',
+      winner: null,
+      status: 'ended',
+      scores: [300, 300],
+    });
+
+    expect(resolveWinner(state)).toBeNull();
+  });
+});
+
 describe('resolveWinner / unfinished game', () => {
   it('declares no winner before the game ends, even with every crown held', () => {
     const state = finishedGame({
@@ -89,5 +123,10 @@ describe('modeAchievement', () => {
 
   it('reports more than ten rounds won without claiming a ten-round total', () => {
     expect(modeAchievement(players[0], 'rondas', 11)).toBe('11 rondas ganadas');
+  });
+
+  it('describes the duel and contrarreloj outcomes', () => {
+    expect(modeAchievement(players[0], 'duelo', 0)).toBe('Primer acierto');
+    expect(modeAchievement({ ...players[0], score: 400 }, 'contrarreloj', 0)).toBe('400 puntos');
   });
 });

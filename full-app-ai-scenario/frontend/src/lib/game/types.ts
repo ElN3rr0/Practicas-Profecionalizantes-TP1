@@ -7,6 +7,11 @@ export type PowerupId = 'fifty-fifty' | 'second-chance' | 'plus-time' | 'skip-qu
 
 export type PowerupInventory = Record<PowerupId, number>;
 
+export type PlayerCosmetics = {
+  frame?: string;
+  title?: string;
+};
+
 export type Player = {
   id: 0 | 1;
   name: string;
@@ -15,9 +20,18 @@ export type Player = {
   crowns: CategoryName[];
   crownTally: number;
   powerups: PowerupInventory;
+  /** Local profile this player is using, or null for a guest. */
+  profileId: string | null;
+  /** Equipped cosmetics copied when the profile was selected, for in-game display. */
+  cosmetics?: PlayerCosmetics;
+  /** Per-game stats; committed to the profile only when the game finishes. */
+  correctAnswers: number;
+  incorrectAnswers: number;
+  streak: number;
+  bestStreak: number;
 };
 
-export type GameMode = 'coronas' | 'rondas';
+export type GameMode = 'coronas' | 'rondas' | 'duelo' | 'contrarreloj';
 
 /** Language of the question/answer content served by the API. */
 export type Language = 'en' | 'es';
@@ -28,6 +42,8 @@ export type GameConfig = {
   powerups: PowerupId[];
   /** Selected content language; persisted and kept across a new game. */
   language: Language;
+  /** When true, finished games feed a best-of-three series instead of closing. */
+  tournament?: boolean;
 };
 
 export type GameStatus = 'setup' | 'spinning' | 'answering' | 'ended';
@@ -45,9 +61,15 @@ export type AnswerOutcome = 'continue' | 'crown-pick' | 'retry' | 'ended' | 'non
 export type GameState = {
   players: [Player, Player];
   config: GameConfig;
+  /** Unique id of the current game, used to deliver rewards exactly once. */
+  gameId: string | null;
   currentTurn: 0 | 1;
   round: number;
   roundWins: [number, number];
+  /** Wins per player in the current best-of-three tournament. */
+  seriesWins: [number, number];
+  /** Seconds left in a contrarreloj game; unused by the other modes. */
+  clock: number;
   winner: 0 | 1 | null;
   ultraChallenge: CategoryName | null;
   status: GameStatus;

@@ -44,6 +44,11 @@ describe('game state types', () => {
         crowns,
         crownTally: 1,
         powerups: emptyInventory(),
+        profileId: null,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        streak: 0,
+        bestStreak: 0,
       },
       {
         id: 1,
@@ -53,6 +58,11 @@ describe('game state types', () => {
         crowns: [],
         crownTally: 0,
         powerups: emptyInventory(),
+        profileId: null,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        streak: 0,
+        bestStreak: 0,
       },
     ];
     const config: GameConfig = { mode, timePerTurn: 15, powerups: enabledPowerups, language: 'es' };
@@ -60,9 +70,12 @@ describe('game state types', () => {
     const state: GameState = {
       players,
       config,
+      gameId: null,
       currentTurn: 0,
       round: 1,
       roundWins: [0, 0],
+      seriesWins: [0, 0],
+      clock: 90,
       winner: null,
       ultraChallenge: 'historia',
       status: 'answering',

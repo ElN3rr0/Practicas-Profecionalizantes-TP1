@@ -1,15 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import GameConfigPanel from '../components/usuarios/GameConfigPanel';
 import PlayerCard from '../components/usuarios/PlayerCard';
+import ProfileAdmin from '../components/usuarios/ProfileAdmin';
 import { playSound } from '../lib/audio';
 import { useGame } from '../lib/game/GameProvider';
+import { seriesChampion } from '../lib/game/rules';
 
 export default function Usuarios() {
   const navigate = useNavigate();
-  const { startGame } = useGame();
+  const { state, startGame } = useGame();
 
   const handleStart = () => {
-    if (!startGame()) return;
+    // Starting from setup after a finished series opens a fresh tournament.
+    const resetSeries = seriesChampion(state.seriesWins) !== null;
+    if (!startGame({ resetSeries })) return;
     navigate('/ruleta');
     playSound('click');
   };
@@ -38,6 +42,8 @@ export default function Usuarios() {
       <div className="mt-6">
         <GameConfigPanel />
       </div>
+
+      <ProfileAdmin />
 
       <div className="mt-8 flex flex-col items-center gap-4">
         <button
