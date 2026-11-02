@@ -117,6 +117,7 @@ export function createInitialState(): GameState {
     seriesWins: [0, 0],
     clock: CONTRARRELOJ_SECONDS,
     retiredBy: null,
+    usedQuestionIds: [],
     winner: null,
     ultraChallenge: null,
     status: 'setup',
@@ -149,7 +150,8 @@ export type GameAction =
   | { type: 'game/start'; currentTurn: 0 | 1; gameId: string; resetSeries?: boolean }
   | { type: 'game/spin' }
   | { type: 'game/land'; category: CategoryName }
-  | { type: 'game/tick' };
+  | { type: 'game/tick' }
+  | { type: 'question/used'; id: string };
 
 function startGameState(
   state: GameState,
@@ -180,6 +182,7 @@ function startGameState(
     seriesWins: resetSeries || state.config.tournament !== true ? [0, 0] : state.seriesWins,
     clock: CONTRARRELOJ_SECONDS,
     retiredBy: null,
+    usedQuestionIds: [],
     winner: null,
     ultraChallenge: null,
     status: 'spinning',
@@ -246,6 +249,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     case 'game/tick':
       return tickClock(state);
+    case 'question/used':
+      return state.usedQuestionIds.includes(action.id)
+        ? state
+        : { ...state, usedQuestionIds: [...state.usedQuestionIds, action.id] };
     default:
       return state;
   }
@@ -564,6 +571,8 @@ export interface GameContextValue {
   endGame: () => boolean;
   /** The current player withdraws and the rival wins. */
   forfeit: () => boolean;
+  /** Records a dataset question as already asked in this game. */
+  markQuestionUsed: (id: string) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -697,6 +706,13 @@ export function GameProvider({
 
   const forfeit = useCallback((): boolean => transition(resolveForfeit), [transition]);
 
+  const markQuestionUsed = useCallback(
+    (id: string) => {
+      dispatch({ type: 'question/used', id });
+    },
+    [dispatch],
+  );
+
   const value = useMemo(
     () => ({
       state,
@@ -714,6 +730,7 @@ export function GameProvider({
       resolveUltra,
       endGame,
       forfeit,
+      markQuestionUsed,
     }),
     [
       state,
@@ -731,6 +748,7 @@ export function GameProvider({
       resolveUltra,
       endGame,
       forfeit,
+      markQuestionUsed,
     ],
   );
 

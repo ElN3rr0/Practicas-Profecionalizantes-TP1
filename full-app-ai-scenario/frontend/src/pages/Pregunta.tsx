@@ -92,6 +92,7 @@ export default function Pregunta() {
     startUltraChallenge,
     resolveUltra,
     forfeit,
+    markQuestionUsed,
   } = useGame();
 
   const category: CategoryName | null = state.ultraChallenge ?? state.currentCategory;
@@ -107,15 +108,16 @@ export default function Pregunta() {
   const [notice, setNotice] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number>(state.config.timePerTurn);
   const [timerTotal, setTimerTotal] = useState<number>(state.config.timePerTurn);
-  const [cursors, setCursors] = useState<Partial<Record<CategoryName, number>>>({});
   const [reload, setReload] = useState(0);
   const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
 
   const resolvedRef = useRef(true);
   const usedPowerupsRef = useRef<Set<PowerupId>>(new Set());
   const excludeStatementRef = useRef<string | null>(null);
+  const usedIdsRef = useRef<Set<string>>(new Set(state.usedQuestionIds));
 
-  const skip = category === null ? 0 : (cursors[category] ?? 0);
+  usedIdsRef.current = new Set(state.usedQuestionIds);
+
   const timePerTurn = state.config.timePerTurn;
   const language = state.config.language;
 
@@ -141,32 +143,20 @@ export default function Pregunta() {
 
     getQuestionsByCategory(category, {
       limit: QUESTIONS_POOL_SIZE,
-      ...(skip > 0 ? { skip } : {}),
       lang: language,
+      random: true,
     })
-      .then(async (questions) => {
+      .then((questions) => {
         if (cancelled) return;
-        let next = buildQuestionRound(
+        const next = buildQuestionRound(
           questions,
           Math.random,
           excludeStatementRef.current ?? undefined,
+          category,
+          usedIdsRef.current,
         );
-
-        // A page past the end of a small category comes back short; retry from the top.
-        if (next === null && skip > 0) {
-          const fallback = await getQuestionsByCategory(category, {
-            limit: QUESTIONS_POOL_SIZE,
-            lang: language,
-          });
-          if (cancelled) return;
-          next = buildQuestionRound(
-            fallback,
-            Math.random,
-            excludeStatementRef.current ?? undefined,
-          );
-        }
-
         excludeStatementRef.current = null;
+        if (next !== null) markQuestionUsed(next.id);
         setQuestion(next);
         setLoad(next === null ? 'insufficient' : 'ready');
         resolvedRef.current = next === null;
@@ -181,7 +171,7 @@ export default function Pregunta() {
     return () => {
       cancelled = true;
     };
-  }, [category, skip, reload, timePerTurn, language]);
+  }, [category, reload, timePerTurn, language, markQuestionUsed]);
 
   const prepareRetry = useCallback(() => {
     setWrongSelection(true);
@@ -330,7 +320,7 @@ export default function Pregunta() {
       }
       if (id === 'skip-question' && category !== null) {
         excludeStatementRef.current = question.statement;
-        setCursors((current) => ({ ...current, [category]: (current[category] ?? 0) + 1 }));
+        setReload((value) => value + 1);
       }
       playSound('powerup');
     },

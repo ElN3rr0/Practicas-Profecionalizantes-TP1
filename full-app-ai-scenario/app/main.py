@@ -114,17 +114,19 @@ def list_by_category(
     skip: int = 0,
     limit: int = 10,
     lang: str = "en",
+    random: bool = False,
     db: Session = Depends(get_db),
 ):
     lang = _normalized_lang(lang)
-    results = (
+    query = (
         db.query(Question, Categorization)
         .join(Categorization, Categorization.question_id == Question.id)
         .filter(Categorization.category_name == category_name)
-        .offset(skip)
-        .limit(limit)
-        .all()
     )
+    # Random mode is the game's question draw: the whole category is a candidate,
+    # not just the first page. Stable order keeps plain pagination predictable.
+    query = query.order_by(func.random()) if random else query.order_by(Question.id)
+    results = query.offset(skip).limit(limit).all()
 
     if not results:
         return []

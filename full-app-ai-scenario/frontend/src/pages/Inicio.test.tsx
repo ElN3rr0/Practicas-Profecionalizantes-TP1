@@ -124,4 +124,13 @@ describe('Inicio', () => {
 
     expect(playMock).toHaveBeenCalledTimes(1);
   });
+
+  it('opens the how-to-play guide without launching the game', () => {
+    renderInicio();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cómo jugar' }));
+
+    expect(screen.getByTestId('how-to-play')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
 });

@@ -38,6 +38,7 @@ describe('buildQuestionRound', () => {
     const round = buildQuestionRound(PAGE, alwaysLast);
 
     expect(round).not.toBeNull();
+    expect(round?.id).toBe('1');
     expect(round?.options).toHaveLength(QUESTIONS_PER_ROUND);
     expect(round?.statement).toBe('¿Quién pintó la Gioconda?');
     expect(round?.options[round.correctIndex]).toBe('Leonardo da Vinci');
@@ -78,8 +79,39 @@ describe('buildQuestionRound', () => {
     expect(round?.statement).toBe('¿En qué museo vive la Gioconda?');
   });
 
-  it('ignores the exclusion when it would leave fewer than four questions', () => {
+  it('skips the excluded question even when the page has exactly four questions', () => {
     const round = buildQuestionRound(PAGE.slice(0, 4), alwaysLast, '¿Quién pintó la Gioconda?');
+
+    expect(round?.statement).not.toBe('¿Quién pintó la Gioconda?');
+    expect(round?.statement).toBe('¿En qué museo vive la Gioconda?');
+    expect(round?.options).toHaveLength(4);
+  });
+
+  it('drops questions explicitly labeled with another category', () => {
+    const mixed: Question[] = [
+      ...PAGE.map((item) => ({ ...item, category_name: 'arte' })),
+      {
+        ...question(9, '¿Pregunta de historia?', 'Respuesta de Historia'),
+        category_name: 'historia',
+      },
+    ];
+
+    const round = buildQuestionRound(mixed, alwaysLast, undefined, 'arte');
+
+    expect(round?.statement).toBe('¿Quién pintó la Gioconda?');
+    expect(round?.options).not.toContain('Respuesta de Historia');
+  });
+
+  it('avoids used questions while unused ones remain', () => {
+    const round = buildQuestionRound(PAGE, alwaysLast, undefined, undefined, new Set(['1', '2']));
+
+    expect(round?.statement).toBe('¿Quién pintó el Guernica?');
+    expect(round?.id).toBe('3');
+  });
+
+  it('allows a repeat when every question was already used', () => {
+    const everyId = new Set(PAGE.map((item) => String(item.id)));
+    const round = buildQuestionRound(PAGE, alwaysLast, undefined, undefined, everyId);
 
     expect(round?.statement).toBe('¿Quién pintó la Gioconda?');
   });

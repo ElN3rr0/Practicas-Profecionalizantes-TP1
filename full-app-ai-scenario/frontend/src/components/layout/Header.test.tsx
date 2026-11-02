@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { MUTE_STORAGE_KEY, setMuted } from '../../lib/audio/mute';
+import { ProfilesProvider } from '../../lib/profiles/ProfilesProvider';
+import { createEmptyProfile, saveProfiles } from '../../lib/profiles/storage';
 import Header from './Header';
 
 const { playSoundMock } = vi.hoisted(() => ({ playSoundMock: vi.fn() }));
@@ -19,8 +21,10 @@ function LocationProbe() {
 function renderHeader(initialPath = '/ruleta') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <Header />
-      <LocationProbe />
+      <ProfilesProvider>
+        <Header />
+        <LocationProbe />
+      </ProfilesProvider>
     </MemoryRouter>,
   );
 }
@@ -92,5 +96,30 @@ describe('Header', () => {
     fireEvent.click(muteToggle());
     expect(playSoundMock).toHaveBeenCalledTimes(1);
     expect(playSoundMock).toHaveBeenCalledWith('click');
+  });
+
+  it('opens the global ranking ordered by experience', () => {
+    const low = { ...createEmptyProfile('Baja'), totalXp: 10 };
+    const high = { ...createEmptyProfile('Alta'), totalXp: 900 };
+    saveProfiles([low, high]);
+
+    renderHeader();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ranking global' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Ranking global de perfiles' });
+    const rows = within(dialog).getAllByTestId(/^ranking-row-/);
+    expect(rows[0]).toHaveTextContent('Alta');
+    expect(rows[1]).toHaveTextContent('Baja');
+    expect(within(dialog).getByText('2 perfiles cargados')).toBeInTheDocument();
+  });
+
+  it('explains the empty ranking and closes it', () => {
+    renderHeader();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ranking global' }));
+    expect(screen.getByTestId('ranking-empty')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar ranking' }));
+    expect(screen.queryByTestId('ranking-modal')).not.toBeInTheDocument();
   });
 });

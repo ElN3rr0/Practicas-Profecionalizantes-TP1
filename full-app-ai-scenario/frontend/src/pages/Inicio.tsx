@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import GuideButton from '../components/guide/GuideButton';
 import CategoryChips from '../components/inicio/CategoryChips';
 import HolographicDisc from '../components/inicio/HolographicDisc';
 import { playSound } from '../lib/audio';
@@ -55,6 +56,11 @@ export default function Inicio() {
             arrow_forward
           </span>
         </button>
+
+        <GuideButton
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-plum bg-[#1a1120] px-6 py-3 font-display text-xs font-semibold uppercase tracking-wider text-light-text transition-all hover:bg-[#241830] active:scale-95 sm:w-auto sm:min-w-[340px]"
+          label="Cómo jugar"
+        />
       </div>
 
       <CategoryChips />

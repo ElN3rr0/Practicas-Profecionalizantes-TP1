@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import GuideButton from '../components/guide/GuideButton';
 import GameConfigPanel from '../components/usuarios/GameConfigPanel';
 import PlayerCard from '../components/usuarios/PlayerCard';
 import ProfileAdmin from '../components/usuarios/ProfileAdmin';
@@ -32,6 +33,9 @@ export default function Usuarios() {
           Compite cara a cara en la misma pantalla. Elige tu rival, configura las reglas y domina el
           tablero.
         </p>
+        <div className="mt-4 flex justify-center">
+          <GuideButton className="flex items-center gap-2 rounded-xl border border-plum bg-[#1a1120] px-4 py-2 font-display text-[11px] font-semibold uppercase tracking-wider text-light-text transition-all hover:bg-[#241830] active:scale-95" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

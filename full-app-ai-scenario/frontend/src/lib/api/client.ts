@@ -16,7 +16,7 @@ export function getCategories(): Promise<Category[]> {
 
 export function getQuestionsByCategory(
   category: string,
-  opts?: { skip?: number; limit?: number; lang?: 'en' | 'es' },
+  opts?: { skip?: number; limit?: number; lang?: 'en' | 'es'; random?: boolean },
 ): Promise<Question[]> {
   const params = new URLSearchParams();
   if (opts?.skip !== undefined) {
@@ -27,6 +27,9 @@ export function getQuestionsByCategory(
   }
   if (opts?.lang !== undefined) {
     params.set('lang', opts.lang);
+  }
+  if (opts?.random === true) {
+    params.set('random', 'true');
   }
   const query = params.toString();
   const path = `/questions/category/${category}${query ? `?${query}` : ''}`;

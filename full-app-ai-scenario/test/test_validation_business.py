@@ -23,6 +23,40 @@ class TestBusinessRulesValidation:
         assert len(results) == 1
         assert all(q["category_name"] == "historia" for q in results)
 
+    def test_modo_random_dibuja_solo_de_la_categoria_y_respeta_el_limite(self, client, db_session):
+        questions = [Question(question=f"historia {index}", answer=f"a{index}") for index in range(5)]
+        db_session.add_all(questions)
+        db_session.commit()
+        for question in questions:
+            db_session.refresh(question)
+            db_session.add(
+                Categorization(
+                    question_id=question.id,
+                    category_name="historia",
+                    confidence_score=0.9,
+                    is_automatic=True,
+                )
+            )
+        other = Question(question="ciencia", answer="otra")
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        db_session.add(
+            Categorization(
+                question_id=other.id,
+                category_name="ciencia",
+                confidence_score=0.9,
+                is_automatic=True,
+            )
+        )
+        db_session.commit()
+
+        resp = client.get("/questions/category/historia?random=true&limit=2")
+        assert resp.status_code == 200
+        results = resp.json()
+        assert len(results) == 2
+        assert all(q["category_name"] == "historia" for q in results)
+
     def test_stats_total_coincide_con_la_suma_por_categoria(self, client, db_session):
         db_session.add_all([
             Question(question="p1", answer="a1", category="a"),

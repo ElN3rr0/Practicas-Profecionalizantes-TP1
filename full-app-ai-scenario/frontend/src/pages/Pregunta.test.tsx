@@ -200,7 +200,7 @@ describe('Pregunta', () => {
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:8000/questions/category/arte?limit=40&lang=es',
+      'http://localhost:8000/questions/category/arte?limit=40&lang=es&random=true',
     );
     expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién pintó la Gioconda?');
     expect(screen.getByTestId('category-badge')).toHaveTextContent('Arte');
@@ -246,7 +246,7 @@ describe('Pregunta', () => {
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:8000/questions/category/arte?limit=40&lang=en',
+      'http://localhost:8000/questions/category/arte?limit=40&lang=en&random=true',
     );
   });
 
@@ -452,21 +452,23 @@ describe('Pregunta', () => {
     expect(readState().players[0].powerups.hint).toBe(0);
   });
 
-  it('Pasa la pregunta fetches another question in the same category', async () => {
+  it('Pasa la pregunta draws another question in the same category', async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValue(0.999);
-    const fetchMock = stubQuestions();
+    stubQuestions();
 
     renderPage(seedStart({ powerups: ['skip-question'] }));
     await flush();
 
+    expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién pintó la Gioconda?');
+
     fireEvent.click(screen.getByTestId('powerup-skip-question'));
     await flush();
 
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      'http://localhost:8000/questions/category/arte?skip=1&limit=40&lang=es',
+    expect(screen.getByTestId('question-statement')).toHaveTextContent(
+      '¿Dónde se exhibe la Gioconda?',
     );
-    expect(screen.getByTestId('question-statement')).toHaveTextContent('¿Quién esculpió el David?');
+    expect(readState().usedQuestionIds).toEqual(['1', '2']);
     expect(readState().currentTurn).toBe(0);
     expect(readState().players[0].score).toBe(0);
     expect(readState().players[0].powerups['skip-question']).toBe(0);
@@ -497,7 +499,7 @@ describe('Pregunta', () => {
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:8000/questions/category/ciencia?limit=40&lang=es',
+      'http://localhost:8000/questions/category/ciencia?limit=40&lang=es&random=true',
     );
     expect(readState().ultraChallenge).toBe('ciencia');
 

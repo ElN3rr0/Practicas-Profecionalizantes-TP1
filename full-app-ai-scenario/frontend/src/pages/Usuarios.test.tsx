@@ -171,4 +171,13 @@ describe('Usuarios', () => {
     expect(playMock).toHaveBeenCalledTimes(1);
     expect(playMock).toHaveBeenCalledWith('click');
   });
+
+  it('opens the how-to-play guide from the setup screen', () => {
+    renderUsuarios();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cómo jugar' }));
+
+    expect(screen.getByTestId('how-to-play')).toBeInTheDocument();
+    expect(pathname()).toBe('/usuarios');
+  });
 });

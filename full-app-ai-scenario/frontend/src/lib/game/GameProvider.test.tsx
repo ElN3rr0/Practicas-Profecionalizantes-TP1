@@ -499,6 +499,17 @@ describe('gameReducer / Phase 3 modes', () => {
   });
 });
 
+describe('gameReducer / question/used', () => {
+  it('records each question once and resets the history on a new game', () => {
+    let state = gameReducer(createInitialState(), { type: 'question/used', id: 'q1' });
+    state = gameReducer(state, { type: 'question/used', id: 'q1' });
+    state = gameReducer(state, { type: 'question/used', id: 'q2' });
+
+    expect(state.usedQuestionIds).toEqual(['q1', 'q2']);
+    expect(start(state).usedQuestionIds).toEqual([]);
+  });
+});
+
 describe('resolveForfeit', () => {
   it('ends the game and gives the win to the rival', () => {
     const step = resolveForfeit(readyGame({ mode: 'coronas' }, 0));

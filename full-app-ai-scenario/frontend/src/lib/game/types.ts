@@ -72,6 +72,8 @@ export type GameState = {
   clock: number;
   /** Player who retired; the rival is declared the winner. */
   retiredBy: 0 | 1 | null;
+  /** Dataset ids already asked in this game, so the draw avoids repeats. */
+  usedQuestionIds: string[];
   winner: 0 | 1 | null;
   ultraChallenge: CategoryName | null;
   status: GameStatus;
